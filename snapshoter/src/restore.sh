@@ -1,12 +1,5 @@
 #!/bin/bash
 
-# Load Environment Variables
-export AWS_ACCESS_KEY_ID=your_access_key_id
-export AWS_SECRET_ACCESS_KEY=your_secret_access_key
-S3_BUCKET=your_s3_bucket_name
-S3_FILE_URI=your_s3_file_uri
-DESTINATION_FOLDER=your_destination_folder
-
 echo "Restoring s3://$S3_BUCKET/$S3_FILE_URI to $DESTINATION_FOLDER"
 
 echo "Making $DESTINATION_FOLDER"
