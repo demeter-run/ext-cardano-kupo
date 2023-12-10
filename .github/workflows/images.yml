@@ -7,6 +7,7 @@ on:
     paths:
       - ".github/workflows/images.yml"
       - "operator/**"
+      - "snapshoter/**"
       
 jobs:
   build-images:
