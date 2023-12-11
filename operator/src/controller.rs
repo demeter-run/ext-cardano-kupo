@@ -76,7 +76,7 @@ impl Display for Network {
     kind = "KupoPort",
     group = "demeter.run",
     version = "v1alpha1",
-    shortname = "kp",
+    shortname = "kpts",
     namespaced
 )]
 #[kube(status = "KupoPortStatus")]

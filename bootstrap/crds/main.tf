@@ -11,7 +11,7 @@ resource "kubernetes_manifest" "customresourcedefinition_kupoports_demeter_run" 
         "kind" = "KupoPort"
         "plural" = "kupoports"
         "shortNames" = [
-          "kp",
+          "kpts",
         ]
         "singular" = "kupoport"
       }
