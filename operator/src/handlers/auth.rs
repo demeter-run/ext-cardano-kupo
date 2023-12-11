@@ -42,10 +42,12 @@ async fn handle_secret(client: Client, namespace: &str, resource: &KupoPort) -> 
     let result = api.get_opt(&name).await?;
 
     if result.is_some() {
+        println!("Updating secret for {}", resource.name_any());
         let patch_params = PatchParams::default();
         api.patch(&name, &patch_params, &Patch::Merge(secret))
             .await?;
     } else {
+        println!("Creating secret for {}", resource.name_any());
         let post_params = PostParams::default();
         api.create(&post_params, &secret).await?;
     }
@@ -78,8 +80,10 @@ async fn handle_auth_plugin(
     let (metadata, data, raw) = auth_plugin(resource.clone())?;
 
     if result.is_some() {
+        println!("Updating auth plugin for: {}", resource.name_any());
         patch_resource(client.clone(), namespace, kong_plugin, &name, raw).await?;
     } else {
+        println!("Creating auth plugin for: {}", resource.name_any());
         create_resource(client.clone(), namespace, kong_plugin, metadata, data).await?;
     }
     Ok(())
@@ -97,8 +101,10 @@ async fn handle_consumer(
     let (metadata, data, raw) = consumer(resource.clone())?;
 
     if result.is_some() {
+        println!("Updating consumer for: {}", resource.name_any());
         patch_resource(client.clone(), namespace, kong_consumer, &name, raw).await?;
     } else {
+        println!("Creating consumer for: {}", resource.name_any());
         create_resource(client.clone(), namespace, kong_consumer, metadata, data).await?;
     }
     Ok(())
@@ -175,7 +181,7 @@ fn auth_plugin(
     let data = json!({
       "plugin": "key-auth",
       "config": {
-        "key_names": ["key"],
+        "key_names": ["apikey"],
 
       }
     });

@@ -23,8 +23,10 @@ pub async fn handle_http_route(
     let (metadata, data, raw) = route(&name, &host_name, resource, private_dns_service_name)?;
 
     if result.is_some() {
+        println!("Updating http route for {}", resource.name_any());
         patch_resource(client.clone(), namespace, http_route, &name, raw).await?;
     } else {
+        println!("Creating http route for {}", resource.name_any());
         create_resource(client.clone(), namespace, http_route, metadata, data).await?;
     }
 
@@ -58,8 +60,17 @@ pub async fn handle_reference_grant(
     let (metadata, data, raw) = grant(&name, private_dns_service_name, namespace)?;
 
     if result.is_some() {
-        patch_resource(client.clone(), namespace, reference_grant, &name, raw).await?;
+        println!("Updating reference grant for {}", resource.name_any());
+        patch_resource(
+            client.clone(),
+            &config.namespace,
+            reference_grant,
+            &name,
+            raw,
+        )
+        .await?;
     } else {
+        println!("Creating reference grant for {}", resource.name_any());
         // we need to get the deserialized payload
         create_resource(
             client.clone(),
