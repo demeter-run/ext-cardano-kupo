@@ -8,7 +8,6 @@ resource "kubernetes_manifest" "customresourcedefinition_kupoports_demeter_run" 
     "spec" = {
       "group" = "demeter.run"
       "names" = {
-        "categories" = []
         "kind" = "KupoPort"
         "plural" = "kupoports"
         "shortNames" = [

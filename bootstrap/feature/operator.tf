@@ -27,7 +27,7 @@ resource "kubernetes_deployment_v1" "operator" {
 
       spec {
         container {
-          image   = "ghcr.io/demeter-run/cardano-kupo-v1-operator:${var.operator_image_tag}"
+          image   = "ghcr.io/demeter-run/ext-cardano-kupo-operator:${var.operator_image_tag}"
           name    = "main"
           command = ["npm", "run", "start"]
 

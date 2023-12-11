@@ -5,7 +5,7 @@ echo "Backing up $SOURCE_FOLDER to s3://$S3_BUCKET/$S3_FILE_URI"
 echo "zip -r $ZIP_FILE $SOURCE_FOLDER"
 # Zip the Folder
 ZIP_FILE="${SOURCE_FOLDER}.zip"
-zip -r $ZIP_FILE $SOURCE_FOLDER
+zip -vr $ZIP_FILE $SOURCE_FOLDER
 
 echo "Uploading $ZIP_FILE to s3://$S3_BUCKET/$S3_FILE_URI"
 # Upload to S3
