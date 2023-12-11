@@ -1,12 +1,11 @@
-name: Images
+name: Snapshoter
 
 on:
   push:
     branches:
       - "main"
     paths:
-      - ".github/workflows/images.yml"
-      - "operator/**"
+      - ".github/workflows/snapshoter.yml"
       - "snapshoter/**"
       
 jobs:
@@ -15,9 +14,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - context: operator
-            file: operator/Dockerfile
-            endpoint: demeter-run/ext-cardano-kupo-operator
           - context: snapshoter
             file: snapshoter/Dockerfile
             endpoint: demeter-run/ext-cardano-kupo-snapshoter
