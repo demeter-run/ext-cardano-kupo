@@ -30,7 +30,7 @@ resource "kubernetes_service_v1" "well_known_service" {
 
     selector = {
       "cardano.demeter.run/network" = var.network
-      "demeter.run/instance"        = local.instance
+      "cardano.demeter.run/kupo-pruned" = var.prune ? "true" : "false"
     }
 
     type = "ClusterIP"

@@ -1,95 +1,137 @@
-resource "kubernetes_stateful_set_v1" "utxorpc" {
-  wait_for_rollout = "false"
+locals {
+  instance_tmp  = var.pruned ? "kupo-${var.network}-pruned" : "kupo-${var.network}"
+  instance_name = var.suffix != "" ? "${local.instance_tmp}-${var.suffix}" : local.instance_tmp
+  base_args = [
+    "--workdir",
+    "/db/${var.namespace}/${local.instance_name}",
+    "--host",
+    "0.0.0.0",
+    "--node-socket",
+    "/ipc/node.socket",
+    "--node-config",
+    "/config/config.json",
+    "--match",
+    "*",
+    "--since",
+    "origin"
+  ]
+  args = var.pruned ? concat(local.base_args, ["--prune-utxo"]) : local.base_args
+}
 
+resource "kubernetes_stateful_set_v1" "kupo" {
+  wait_for_rollout = "false"
   metadata {
-    name      = local.instance
+    name      = local.instance_name
     namespace = var.namespace
     labels = {
-      "demeter.run/kind"            = "UtxoRpcInstance"
-      "demeter.run/release"         = var.release
-      "cardano.demeter.run/network" = var.network
-      "demeter.run/instance"        = local.instance
+      "demeter.run/kind"                = "KupoInstance"
+      "cardano.demeter.run/network"     = var.network
+      "cardano.demeter.run/kupo-pruned" = var.pruned ? "true" : "false"
     }
   }
   spec {
-    replicas     = var.replicas
-    service_name = "utxorpc"
-    volume_claim_template {
-      metadata {
-        name = "data"
-      }
-      spec {
-        access_modes = ["ReadWriteOnce"]
-        resources {
-          requests = {
-            storage = var.resources.storage.size
-          }
-        }
-        storage_class_name = var.resources.storage.class
-      }
-    }
+    replicas     = 1
+    service_name = "kupo"
     selector {
       match_labels = {
-        "demeter.run/instance"        = local.instance
-        "demeter.run/release"         = var.release
-        "cardano.demeter.run/network" = var.network
+        "demeter.run/instance"            = local.instance_name
+        "cardano.demeter.run/network"     = var.network
+        "cardano.demeter.run/kupo-pruned" = var.pruned ? "true" : "false"
       }
     }
     template {
       metadata {
         labels = {
-          "demeter.run/instance"        = local.instance
-          "demeter.run/release"         = var.release
-          "cardano.demeter.run/network" = var.network
+          "demeter.run/instance"            = local.instance_name
+          "cardano.demeter.run/network"     = var.network
+          "cardano.demeter.run/kupo-pruned" = var.pruned ? "true" : "false"
         }
       }
       spec {
+        security_context {
+          fs_group = 1000
+        }
+
         container {
-          name  = local.instance
-          image = "ghcr.io/txpipe/dolos:${var.dolos_version}"
-          args = [
-            "/etc/config/dolos.toml",
-            "daemon"
-          ]
+          name              = "main"
+          image             = "ghcr.io/demeter-run/cardano-kupo:${var.image_tag}"
+          image_pull_policy = "Always"
+          args              = local.args
+
+          port {
+            container_port = 1442
+            name           = "http"
+            protocol       = "TCP"
+          }
+
           resources {
-            limits   = var.resources.limits
-            requests = var.resources.requests
-          }
-
-          port {
-            name           = "grpc"
-            container_port = 50051
-            protocol       = "TCP"
-          }
-
-          port {
-            name           = "ouroboros"
-            container_port = 30013
-            protocol       = "TCP"
+            limits = {
+              cpu    = var.resources.limits.cpu
+              memory = var.resources.limits.memory
+            }
+            requests = {
+              cpu    = var.resources.requests.cpu
+              memory = var.resources.requests.memory
+            }
           }
 
           volume_mount {
-            name       = "data"
-            mount_path = "/var/data"
-          }
-          volume_mount {
-            name       = "config"
-            mount_path = "/etc/config"
+            mount_path = "/db"
+            name       = "db"
           }
 
+          volume_mount {
+            mount_path = "/config"
+            name       = "node-config"
+          }
+
+          volume_mount {
+            mount_path = "/ipc"
+            name       = "cardanoipc"
+          }
+        }
+
+        container {
+          args = [
+            "-d",
+            "UNIX-LISTEN:/ipc/node.socket,fork,reuseaddr,unlink-early",
+            "TCP:${var.n2n_endpoint}",
+          ]
+
+          image = "alpine/socat:latest"
+
+          name = "socat"
+
+          volume_mount {
+            mount_path = "/ipc"
+            name       = "cardanoipc"
+          }
         }
 
         volume {
-          name = "config"
+          name = "cardanoipc"
+          empty_dir {}
+        }
+
+        volume {
+          name = "node-config"
           config_map {
             name = "configs-${var.network}"
+          }
+        }
+
+        volume {
+          name = "db"
+          persistent_volume_claim {
+            claim_name = var.db_volume_claim
           }
         }
 
         toleration {
           effect   = "NoSchedule"
           key      = "demeter.run/compute-profile"
-          operator = "Exists"
+          operator = "Equal"
+          value    = "disk-intensive"
         }
 
         toleration {
@@ -103,10 +145,9 @@ resource "kubernetes_stateful_set_v1" "utxorpc" {
           effect   = "NoSchedule"
           key      = "demeter.run/availability-sla"
           operator = "Equal"
-          value    = "best-effort"
+          value    = "consistent"
         }
       }
     }
   }
 }
-

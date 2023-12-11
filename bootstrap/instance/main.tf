@@ -1,67 +1,51 @@
-variable "namespace" {}
+variable "namespace" {
+  default = "ftr-kupo-v1"
+}
 
 variable "network" {
   type = string
 }
 
-variable "salt" {
+variable "pruned" {
+  default = false
+}
+
+variable "image_tag" {
   type = string
 }
 
-variable "instance_name" {
+variable "n2n_endpoint" {
   type = string
 }
 
-variable "replicas" {
-  default = 1
-}
-
-locals {
-  instance = "${var.instance_name}-${var.salt}"
-}
-
-variable "operator_version" {
+variable "db_volume_claim" {
   type = string
-}
-
-variable "dolos_version" {
-  type = string
-  default = "v0.6.0"
-}
-
-variable "release" {
-  default = "stable"
 }
 
 variable "resources" {
   type = object({
     limits = object({
-      cpu    = optional(string)
+      cpu    = string
       memory = string
     })
     requests = object({
       cpu    = string
       memory = string
     })
-    storage = object({
-      size  = string
-      class = string
-    })
   })
   default = {
-    requests = {
-      cpu    = "50m"
-      memory = "512Mi"
-    }
     limits = {
-      cpu    = "1000m"
-      memory = "512Mi"
+      cpu    = "1",
+      memory = "1Gi"
     }
-    storage = {
-      size  = "30Gi"
-      class = "fast"
+    requests = {
+      cpu    = "500m",
+      memory = "1Gi"
     }
-
   }
+}
+
+variable "suffix" {
+  default = ""
 }
 
