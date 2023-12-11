@@ -83,7 +83,7 @@ impl Display for Network {
 #[kube(
     printcolumn = r#"{"name":"Network", "jsonPath": ".spec.network", "type": "string"},
     {"name": "Pruned", "jsonPath": ".spec.pruneUtxo", "type": "boolean"},
-    {"name": "Throughput Tier", "jsonPath":"spec.throughputTier", "type": "string"}, 
+    {"name": "Throughput Tier", "jsonPath":".spec.throughputTier", "type": "string"}, 
     {"name": "Endpoint URL", "jsonPath": ".status.endpointUrl",  "type": "string"},
     {"name": "Auth Token", "jsonPath": ".status.authToken", "type": "string"}"#
 )]

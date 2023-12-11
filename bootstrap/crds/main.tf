@@ -31,7 +31,7 @@ resource "kubernetes_manifest" "customresourcedefinition_kupoports_demeter_run" 
               "type" = "boolean"
             },
             {
-              "jsonPath" = "spec.throughputTier"
+              "jsonPath" = ".spec.throughputTier"
               "name" = "Throughput Tier"
               "type" = "string"
             },
