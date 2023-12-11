@@ -4,7 +4,7 @@ use serde_json::json;
 
 use crate::{
     create_resource, get_auth_name, get_config, get_rate_limit_name, get_resource, http_route,
-    patch_resource, patch_resource_status, reference_grant, Error, KupoPort,
+    patch_resource, patch_resource_status, reference_grant, Error, KupoPort, KupoPortStatus,
 };
 
 pub async fn handle_http_route(
@@ -28,12 +28,18 @@ pub async fn handle_http_route(
         create_resource(client.clone(), namespace, http_route, metadata, data).await?;
     }
 
-    let status = json!({
-      "status": {
-        "endpoint_url": format!("https://{}", host_name),
-      }
-    });
-    patch_resource_status(client.clone(), namespace, kupo_port, &name, status).await?;
+    let status = KupoPortStatus {
+        endpoint_url: Some(format!("https://{}", host_name)),
+        ..Default::default()
+    };
+    patch_resource_status(
+        client.clone(),
+        namespace,
+        kupo_port,
+        &resource.name_any(),
+        serde_json::to_value(status)?,
+    )
+    .await?;
     Ok(())
 }
 
@@ -55,7 +61,14 @@ pub async fn handle_reference_grant(
         patch_resource(client.clone(), namespace, reference_grant, &name, raw).await?;
     } else {
         // we need to get the deserialized payload
-        create_resource(client.clone(), namespace, reference_grant, metadata, data).await?;
+        create_resource(
+            client.clone(),
+            &config.namespace,
+            reference_grant,
+            metadata,
+            data,
+        )
+        .await?;
     }
     Ok(())
 }
@@ -122,7 +135,7 @@ fn route(
               {
                 "kind": "Service",
                 "name": private_dns_service_name,
-                "port": config.http_port,
+                "port": config.http_port.parse::<i32>()?,
                 "namespace": config.namespace
               }
             ]
@@ -147,6 +160,7 @@ fn grant(
     project_namespace: &str,
 ) -> Result<(ObjectMeta, serde_json::Value, serde_json::Value), Error> {
     let reference_grant = reference_grant();
+    let http_route = http_route();
 
     let metadata: ObjectMeta = ObjectMeta::deserialize(&json!({
       "name": name,
@@ -156,8 +170,8 @@ fn grant(
       "spec": {
         "from": [
               {
-                  "group": "gateway.networking.k8s.io",
-                  "kind": "HTTPRoute'",
+                  "group": http_route.group,
+                  "kind": http_route.kind,
                   "namespace": project_namespace,
               },
             ],

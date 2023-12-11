@@ -4,6 +4,7 @@ use kube::{
     discovery::ApiResource,
     Api, Client,
 };
+use serde_json::json;
 
 pub fn http_route() -> ApiResource {
     ApiResource {
@@ -98,8 +99,9 @@ pub async fn patch_resource_status(
 ) -> Result<(), kube::Error> {
     let api: Api<DynamicObject> = Api::namespaced_with(client, namespace, &api_resource);
 
+    let status = json!({ "status": payload });
     let patch_params = PatchParams::default();
-    api.patch_status(name, &patch_params, &Patch::Merge(payload))
+    api.patch_status(name, &patch_params, &Patch::Merge(status))
         .await?;
     Ok(())
 }

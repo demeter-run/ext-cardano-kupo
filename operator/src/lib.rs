@@ -10,6 +10,9 @@ pub enum Error {
 
     #[error("Deserialize Error: {0}")]
     DeserializeError(#[source] serde_json::Error),
+
+    #[error("Parse Int error: {0}")]
+    ParseIntError(#[source] std::num::ParseIntError),
 }
 
 impl Error {
@@ -29,6 +32,12 @@ impl From<serde_json::Error> for Error {
 impl From<kube::Error> for Error {
     fn from(value: kube::Error) -> Self {
         Error::KubeError(value)
+    }
+}
+
+impl From<std::num::ParseIntError> for Error {
+    fn from(value: std::num::ParseIntError) -> Self {
+        Error::ParseIntError(value)
     }
 }
 

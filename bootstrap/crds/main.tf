@@ -83,16 +83,14 @@ resource "kubernetes_manifest" "customresourcedefinition_kupoports_demeter_run" 
                   "nullable" = true
                   "properties" = {
                     "authToken" = {
+                      "nullable" = true
                       "type" = "string"
                     }
                     "endpointUrl" = {
+                      "nullable" = true
                       "type" = "string"
                     }
                   }
-                  "required" = [
-                    "authToken",
-                    "endpointUrl",
-                  ]
                   "type" = "object"
                 }
               }

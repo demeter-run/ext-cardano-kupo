@@ -5,6 +5,7 @@ use base64::{
     engine::general_purpose::{self},
     Engine as _,
 };
+use bech32::ToBase32;
 use k8s_openapi::{api::core::v1::Secret, apimachinery::pkg::apis::meta::v1::OwnerReference};
 use kube::{
     api::{Patch, PatchParams, PostParams},
@@ -16,7 +17,7 @@ use serde_json::json;
 
 use crate::{
     create_resource, get_auth_name, get_config, get_resource, kong_consumer, kong_plugin,
-    patch_resource, patch_resource_status, Error, KupoPort,
+    patch_resource, patch_resource_status, Error, KupoPort, KupoPortStatus,
 };
 
 pub async fn handle_auth(
@@ -37,10 +38,10 @@ async fn handle_secret(client: Client, namespace: &str, resource: &KupoPort) -> 
 
     let api = Api::<Secret>::namespaced(client.clone(), namespace);
 
-    let secret = secret(&api_key, resource.clone());
-    let result = api.get(&name).await?;
+    let secret = secret(&name, &api_key, resource.clone());
+    let result = api.get_opt(&name).await?;
 
-    if result.data.is_some() {
+    if result.is_some() {
         let patch_params = PatchParams::default();
         api.patch(&name, &patch_params, &Patch::Merge(secret))
             .await?;
@@ -49,12 +50,19 @@ async fn handle_secret(client: Client, namespace: &str, resource: &KupoPort) -> 
         api.create(&post_params, &secret).await?;
     }
 
-    let status = json!({
-      "status": {
-        "auth_token": api_key,
-      }
-    });
-    patch_resource_status(client.clone(), namespace, kupo_port, &name, status).await?;
+    let status = KupoPortStatus {
+        auth_token: Some(api_key),
+        ..Default::default()
+    };
+
+    patch_resource_status(
+        client.clone(),
+        namespace,
+        kupo_port,
+        &resource.name_any(),
+        serde_json::to_value(status)?,
+    )
+    .await?;
     Ok(())
 }
 
@@ -108,12 +116,14 @@ async fn generate_api_key(name: &str, namespace: &str) -> Result<String, Error> 
     let _ = argon2.hash_password_into(password.as_slice(), salt, &mut output);
 
     // Encode the hash using Bech32
-    let with_bech = general_purpose::URL_SAFE_NO_PAD.encode(output);
+    let base64 = general_purpose::URL_SAFE_NO_PAD.encode(output);
+    let with_bech =
+        bech32::encode("dmtr_kupo", base64.to_base32(), bech32::Variant::Bech32).unwrap();
 
     Ok(with_bech)
 }
 
-fn secret(api_key: &str, owner: KupoPort) -> Secret {
+fn secret(name: &str, api_key: &str, owner: KupoPort) -> Secret {
     let mut string_data = BTreeMap::new();
     string_data.insert(String::from("key"), String::from(api_key).to_string());
 
@@ -124,7 +134,7 @@ fn secret(api_key: &str, owner: KupoPort) -> Secret {
     );
 
     let metadata = ObjectMeta {
-        name: Some(owner.name_any()),
+        name: Some(name.to_string()),
         owner_references: Some(vec![OwnerReference {
             api_version: KupoPort::api_version(&()).to_string(),
             kind: KupoPort::kind(&()).to_string(),

@@ -20,8 +20,6 @@ use std::{
     sync::Arc,
     time::Duration,
 };
-use tracing::error;
-
 pub static KUPO_PORT_FINALIZER: &str = "kupoports.demeter.run";
 
 struct Context {
@@ -99,8 +97,10 @@ pub struct KupoPortSpec {
 #[derive(Deserialize, Serialize, Clone, Default, Debug, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct KupoPortStatus {
-    pub endpoint_url: String,
-    pub auth_token: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub endpoint_url: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub auth_token: Option<String>,
 }
 
 impl KupoPort {
@@ -110,7 +110,6 @@ impl KupoPort {
 
         let private_dns_service_name =
             build_private_dns_service_name(&self.spec.network, self.spec.prune_utxo);
-
         handle_reference_grant(client.clone(), &namespace, self, &private_dns_service_name).await?;
         handle_http_route(client.clone(), &namespace, self, &private_dns_service_name).await?;
         handle_auth(client.clone(), &namespace, self).await?;
@@ -130,12 +129,6 @@ fn build_private_dns_service_name(network: &Network, prune_utxo: bool) -> String
 }
 
 async fn reconcile(crd: Arc<KupoPort>, ctx: Arc<Context>) -> Result<Action> {
-    // let url = match crd.spec.network {
-    //     Network::Mainnet => &ctx.config.kupo_url_mainnet,
-    //     Network::Preprod => &ctx.config.kupo_url_preprod,
-    //     Network::Preview => &ctx.config.kupo_url_preview,
-    // };
-
     let ns = crd.namespace().unwrap();
     let crds: Api<KupoPort> = Api::namespaced(ctx.client.clone(), &ns);
 
@@ -150,7 +143,6 @@ async fn reconcile(crd: Arc<KupoPort>, ctx: Arc<Context>) -> Result<Action> {
 }
 
 fn error_policy(crd: Arc<KupoPort>, err: &Error, ctx: Arc<Context>) -> Action {
-    error!("reconcile failed: {:?}", err);
     ctx.metrics.reconcile_failure(&crd, err);
     Action::requeue(Duration::from_secs(5))
 }
@@ -159,7 +151,7 @@ pub async fn run(state: State, config: Config) -> Result<(), Error> {
     let client = Client::try_default().await?;
     let crds = Api::<KupoPort>::all(client.clone());
     let metrics = Metrics::default().register(&state.registry).unwrap();
-    let ctx = Context::new(client, metrics, config);
+    let ctx = Context::new(client.clone(), metrics, config);
 
     Controller::new(crds, WatcherConfig::default().any_semantic())
         .shutdown_on_signal()
