@@ -29,7 +29,6 @@ resource "kubernetes_deployment_v1" "operator" {
         container {
           image   = "ghcr.io/demeter-run/ext-cardano-kupo-operator:${var.operator_image_tag}"
           name    = "main"
-          command = ["npm", "run", "start"]
 
           env {
             name  = "PORT"
@@ -113,7 +112,8 @@ resource "kubernetes_deployment_v1" "operator" {
         toleration {
           effect   = "NoSchedule"
           key      = "demeter.run/compute-arch"
-          operator = "Exists"
+          operator = "Equal"
+          value    = "x86"
         }
 
         toleration {
