@@ -181,8 +181,7 @@ fn auth_plugin(
     let data = json!({
       "plugin": "key-auth",
       "config": {
-        "key_names": ["apikey"],
-
+        "key_names": ["dmtr-api-key"],
       }
     });
 

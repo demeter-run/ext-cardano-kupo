@@ -14,7 +14,7 @@ pub async fn handle_http_route(
     private_dns_service_name: &str,
 ) -> Result<(), Error> {
     let name = format!("kupo-{}", resource.name_any());
-    let host_name = build_host(&name, &namespace_to_slug(namespace));
+    let host_name = build_host(&resource.name_any(), &namespace_to_slug(namespace));
     let http_route = http_route();
     let kupo_port = KupoPort::api_resource();
 
