@@ -89,6 +89,19 @@ resource "kubernetes_stateful_set_v1" "kupo" {
             mount_path = "/ipc"
             name       = "cardanoipc"
           }
+
+          readiness_probe {
+            exec {
+              command = [
+                "/bin/sh",
+                "-c",
+                "URL='http://localhost:1442/health'; METRICS=$(wget -qO- $URL); NODE_TIP=$(echo \"$METRICS\" | grep 'kupo_most_recent_node_tip' | awk '{print $2}'); CHECKPOINT=$(echo \"$METRICS\" | grep 'kupo_most_recent_checkpoint' | awk '{print $2}'); if [ \"$NODE_TIP\" = \"$CHECKPOINT\" ]; then exit 0; else exit 1; fi"
+              ]
+            }
+
+            initial_delay_seconds = 5
+            period_seconds        = 30
+          }
         }
 
         container {
