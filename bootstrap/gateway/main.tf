@@ -241,7 +241,6 @@ resource "kubernetes_manifest" "prometheus_plugin" {
     "kind"       = "KongClusterPlugin"
     "metadata" = {
       "name"      = "prometheus"
-      "namespace" = var.namespace
       "annotations" = {
         "kubernetes.io/ingress.class" = var.extension_name
       }
