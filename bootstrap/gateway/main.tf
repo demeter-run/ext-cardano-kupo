@@ -238,12 +238,15 @@ resource "kubernetes_manifest" "gateway" {
 resource "kubernetes_manifest" "prometheus_plugin" {
   manifest = {
     "apiVersion" = "configuration.konghq.com/v1"
-    "kind"       = "KongPlugin"
+    "kind"       = "KongClusterPlugin"
     "metadata" = {
       "name"      = "prometheus"
       "namespace" = var.namespace
       "annotations" = {
         "kubernetes.io/ingress.class" = var.extension_name
+      }
+      "labels" = {
+        "global" = "true"
       }
     }
     "config" = {
