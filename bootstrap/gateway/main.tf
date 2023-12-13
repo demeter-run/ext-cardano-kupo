@@ -240,7 +240,7 @@ resource "kubernetes_manifest" "prometheus_plugin" {
     "apiVersion" = "configuration.konghq.com/v1"
     "kind"       = "KongClusterPlugin"
     "metadata" = {
-      "name"      = "prometheus"
+      "name"      = "prometheus-${var.extension_name}"
       "annotations" = {
         "kubernetes.io/ingress.class" = var.extension_name
       }
