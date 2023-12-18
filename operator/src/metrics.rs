@@ -1,4 +1,4 @@
-use kube::ResourceExt;
+use kube::{api::ListParams, Api, ResourceExt};
 use prometheus::{opts, IntCounterVec, Registry};
 use std::{sync::Arc, thread::sleep};
 
@@ -60,7 +60,45 @@ impl Metrics {
 pub async fn run_metrics_collector(_state: Arc<State>) -> Result<(), Error> {
     let config = get_config();
 
+    let kube_client = kube::Client::try_default().await?;
+    let http_client = reqwest::Client::builder().build().unwrap();
+
+    let crds = Api::<KupoPort>::all(kube_client.clone());
+    let params = ListParams::default();
+
     loop {
+        let object_list = crds.list(&params).await?;
+        for kupo in object_list.items.iter() {
+            let ns = kupo.namespace();
+            if ns.is_none() {
+                continue;
+            }
+            let ns = ns.unwrap();
+
+            let query = format!(
+                "sum by (route) (kong_http_requests_total{{service='kupo-v1-ingress-kong-proxy', route=~'.*{ns}.*'}})"
+            );
+            let result = http_client
+                .get(format!("{}/query?query={query}", config.prometheus_url))
+                .send()
+                .await;
+
+            if result.is_err() {
+                // TODO send error to prometheus
+                continue;
+            }
+
+            let response = result.unwrap();
+            let status = response.status();
+            if status.is_client_error() || status.is_server_error() {
+                // TODO send error to prometheus
+                continue;
+            }
+
+            let value = response.json::<serde_json::Value>().await.unwrap();
+            println!("{value}");
+        }
+
         sleep(config.metrics_delay)
     }
 }

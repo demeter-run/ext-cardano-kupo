@@ -17,15 +17,16 @@ pub struct Config {
     pub api_key_salt: String,
     pub http_port: String,
     pub metrics_delay: Duration,
+    pub prometheus_url: String,
 }
 
 impl Config {
     pub fn from_env() -> Self {
         let metrics_delay = Duration::from_secs(
             std::env::var("METRICS_DELAY")
-                .unwrap_or("30".into())
+                .expect("METRICS_DELAY must be set")
                 .parse::<u64>()
-                .unwrap(),
+                .expect("METRICS_DELAY must be a number"),
         );
 
         Self {
@@ -35,6 +36,7 @@ impl Config {
             api_key_salt: env::var("API_KEY_SALT").unwrap_or("kupo-salt".into()),
             http_port: "1442".into(),
             metrics_delay,
+            prometheus_url: env::var("PROMETHEUS_URL").expect("PROMETHEUS_URL must be set"),
         }
     }
 }
