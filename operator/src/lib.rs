@@ -1,3 +1,4 @@
+use prometheus::Registry;
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -41,11 +42,28 @@ impl From<std::num::ParseIntError> for Error {
     }
 }
 
+#[derive(Clone)]
+pub struct State {
+    registry: Registry,
+    pub metrics: Metrics,
+}
+impl State {
+    pub fn new() -> Self {
+        let registry = Registry::default();
+        let metrics = Metrics::default().register(&registry).unwrap();
+        Self { registry, metrics }
+    }
+
+    pub fn metrics_collected(&self) -> Vec<prometheus::proto::MetricFamily> {
+        self.registry.gather()
+    }
+}
+
 pub mod controller;
 pub use crate::controller::*;
 
-mod metrics;
-pub use metrics::Metrics;
+pub mod metrics;
+pub use metrics::*;
 
 mod helpers;
 pub use helpers::*;

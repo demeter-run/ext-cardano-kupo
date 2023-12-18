@@ -1,31 +1,20 @@
-use crate::{Error, KupoPort};
 use kube::ResourceExt;
 use prometheus::{opts, IntCounterVec, Registry};
+use std::{sync::Arc, thread::sleep};
+
+use crate::{get_config, Error, KupoPort, State};
 
 #[derive(Clone)]
 pub struct Metrics {
-    pub users_created: IntCounterVec,
-    pub users_deactivated: IntCounterVec,
+    pub dcu: IntCounterVec,
     pub failures: IntCounterVec,
 }
 
 impl Default for Metrics {
     fn default() -> Self {
-        let users_created = IntCounterVec::new(
-            opts!(
-                "crd_controller_users_created_total",
-                "total of users created in dbsync",
-            ),
-            &["username"],
-        )
-        .unwrap();
-
-        let users_deactivated = IntCounterVec::new(
-            opts!(
-                "crd_controller_users_deactivated_total",
-                "total of users deactivated in dbsync",
-            ),
-            &["username"],
+        let dcu = IntCounterVec::new(
+            opts!("dmtr_consumed_dcus", "quantity of dcu consumed",),
+            &["project", "service", "service_type", "tenancy"],
         )
         .unwrap();
 
@@ -38,19 +27,15 @@ impl Default for Metrics {
         )
         .unwrap();
 
-        Metrics {
-            users_created,
-            users_deactivated,
-            failures,
-        }
+        Metrics { dcu, failures }
     }
 }
 
 impl Metrics {
     pub fn register(self, registry: &Registry) -> Result<Self, prometheus::Error> {
         registry.register(Box::new(self.failures.clone()))?;
-        registry.register(Box::new(self.users_created.clone()))?;
-        registry.register(Box::new(self.users_deactivated.clone()))?;
+        registry.register(Box::new(self.dcu.clone()))?;
+
         Ok(self)
     }
 
@@ -60,11 +45,22 @@ impl Metrics {
             .inc()
     }
 
-    pub fn count_user_created(&self, username: &str) {
-        self.users_created.with_label_values(&[username]).inc();
+    pub fn count_dcu_consumed(&self) {
+        self.dcu
+            .with_label_values(&[
+                "project".into(),
+                "service",
+                "service_type",
+                "tenancy".into(),
+            ])
+            .inc_by(1);
     }
+}
 
-    pub fn count_user_deactivated(&self, username: &str) {
-        self.users_deactivated.with_label_values(&[username]).inc();
+pub async fn run_metrics_collector(_state: Arc<State>) -> Result<(), Error> {
+    let config = get_config();
+
+    loop {
+        sleep(config.metrics_delay)
     }
 }

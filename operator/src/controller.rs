@@ -1,7 +1,7 @@
 use crate::{
     auth::handle_auth,
     gateway::{handle_http_route, handle_reference_grant},
-    Error, Metrics, Result,
+    Error, Metrics, Result, State,
 };
 use futures::StreamExt;
 use kube::{
@@ -30,15 +30,6 @@ struct Context {
 impl Context {
     pub fn new(client: Client, metrics: Metrics) -> Self {
         Self { client, metrics }
-    }
-}
-#[derive(Clone, Default)]
-pub struct State {
-    registry: prometheus::Registry,
-}
-impl State {
-    pub fn metrics(&self) -> Vec<prometheus::proto::MetricFamily> {
-        self.registry.gather()
     }
 }
 
@@ -143,7 +134,7 @@ fn error_policy(crd: Arc<KupoPort>, err: &Error, ctx: Arc<Context>) -> Action {
     Action::requeue(Duration::from_secs(5))
 }
 
-pub async fn run(state: State) -> Result<(), Error> {
+pub async fn run(state: Arc<State>) -> Result<(), Error> {
     let client = Client::try_default().await?;
     let crds = Api::<KupoPort>::all(client.clone());
     let metrics = Metrics::default().register(&state.registry).unwrap();
