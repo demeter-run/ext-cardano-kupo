@@ -1,7 +1,7 @@
 use crate::{
     auth::handle_auth,
     gateway::{handle_http_route, handle_reference_grant},
-    Config, Error, Metrics, Result,
+    Error, Metrics, Result,
 };
 use futures::StreamExt;
 use kube::{
@@ -20,20 +20,16 @@ use std::{
     sync::Arc,
     time::Duration,
 };
+
 pub static KUPO_PORT_FINALIZER: &str = "kupoports.demeter.run";
 
 struct Context {
     pub client: Client,
     pub metrics: Metrics,
-    pub config: Config,
 }
 impl Context {
-    pub fn new(client: Client, metrics: Metrics, config: Config) -> Self {
-        Self {
-            client,
-            metrics,
-            config,
-        }
+    pub fn new(client: Client, metrics: Metrics) -> Self {
+        Self { client, metrics }
     }
 }
 #[derive(Clone, Default)]
@@ -116,7 +112,7 @@ impl KupoPort {
         Ok(Action::requeue(Duration::from_secs(5 * 60)))
     }
 
-    async fn cleanup(&self, ctx: Arc<Context>) -> Result<Action> {
+    async fn cleanup(&self, _: Arc<Context>) -> Result<Action> {
         Ok(Action::await_change())
     }
 }
@@ -147,11 +143,11 @@ fn error_policy(crd: Arc<KupoPort>, err: &Error, ctx: Arc<Context>) -> Action {
     Action::requeue(Duration::from_secs(5))
 }
 
-pub async fn run(state: State, config: Config) -> Result<(), Error> {
+pub async fn run(state: State) -> Result<(), Error> {
     let client = Client::try_default().await?;
     let crds = Api::<KupoPort>::all(client.clone());
     let metrics = Metrics::default().register(&state.registry).unwrap();
-    let ctx = Context::new(client.clone(), metrics, config);
+    let ctx = Context::new(client.clone(), metrics);
 
     Controller::new(crds, WatcherConfig::default().any_semantic())
         .shutdown_on_signal()

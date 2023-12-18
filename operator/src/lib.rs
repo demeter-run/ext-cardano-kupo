@@ -41,18 +41,6 @@ impl From<std::num::ParseIntError> for Error {
     }
 }
 
-pub struct Config {}
-impl Config {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
-impl Default for Config {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 pub mod controller;
 pub use crate::controller::*;
 
