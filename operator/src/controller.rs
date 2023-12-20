@@ -1,7 +1,7 @@
 use crate::{
     auth::handle_auth,
     gateway::{handle_http_route, handle_reference_grant},
-    Config, Error, Metrics, Result,
+    Error, Metrics, Network, Result, State,
 };
 use futures::StreamExt;
 use kube::{
@@ -15,57 +15,17 @@ use kube::{
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use std::{
-    fmt::{self, Display, Formatter},
-    sync::Arc,
-    time::Duration,
-};
+use std::{sync::Arc, time::Duration};
+
 pub static KUPO_PORT_FINALIZER: &str = "kupoports.demeter.run";
 
 struct Context {
     pub client: Client,
     pub metrics: Metrics,
-    pub config: Config,
 }
 impl Context {
-    pub fn new(client: Client, metrics: Metrics, config: Config) -> Self {
-        Self {
-            client,
-            metrics,
-            config,
-        }
-    }
-}
-#[derive(Clone, Default)]
-pub struct State {
-    registry: prometheus::Registry,
-}
-impl State {
-    pub fn metrics(&self) -> Vec<prometheus::proto::MetricFamily> {
-        self.registry.gather()
-    }
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
-pub enum Network {
-    #[serde(rename = "mainnet")]
-    Mainnet,
-    #[serde(rename = "preprod")]
-    Preprod,
-    #[serde(rename = "preview")]
-    Preview,
-    #[serde(rename = "sanchonet")]
-    Sanchonet,
-}
-
-impl Display for Network {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            Network::Mainnet => write!(f, "mainnet"),
-            Network::Preprod => write!(f, "preprod"),
-            Network::Preview => write!(f, "preview"),
-            Network::Sanchonet => write!(f, "sanchonet"),
-        }
+    pub fn new(client: Client, metrics: Metrics) -> Self {
+        Self { client, metrics }
     }
 }
 
@@ -116,7 +76,7 @@ impl KupoPort {
         Ok(Action::requeue(Duration::from_secs(5 * 60)))
     }
 
-    async fn cleanup(&self, ctx: Arc<Context>) -> Result<Action> {
+    async fn cleanup(&self, _: Arc<Context>) -> Result<Action> {
         Ok(Action::await_change())
     }
 }
@@ -147,11 +107,10 @@ fn error_policy(crd: Arc<KupoPort>, err: &Error, ctx: Arc<Context>) -> Action {
     Action::requeue(Duration::from_secs(5))
 }
 
-pub async fn run(state: State, config: Config) -> Result<(), Error> {
+pub async fn run(state: Arc<State>) -> Result<(), Error> {
     let client = Client::try_default().await?;
     let crds = Api::<KupoPort>::all(client.clone());
-    let metrics = Metrics::default().register(&state.registry).unwrap();
-    let ctx = Context::new(client.clone(), metrics, config);
+    let ctx = Context::new(client, state.metrics.clone());
 
     Controller::new(crds, WatcherConfig::default().any_semantic())
         .shutdown_on_signal()

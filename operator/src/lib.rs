@@ -1,3 +1,8 @@
+use std::fmt::{self, Display, Formatter};
+
+use prometheus::Registry;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -13,6 +18,12 @@ pub enum Error {
 
     #[error("Parse Int error: {0}")]
     ParseIntError(#[source] std::num::ParseIntError),
+
+    #[error("Parse Network error: {0}")]
+    ParseNetworkError(String),
+
+    #[error("Http Request error: {0}")]
+    HttpError(String),
 }
 
 impl Error {
@@ -41,23 +52,68 @@ impl From<std::num::ParseIntError> for Error {
     }
 }
 
-pub struct Config {}
-impl Config {
+#[derive(Clone)]
+pub struct State {
+    registry: Registry,
+    pub metrics: Metrics,
+}
+impl State {
     pub fn new() -> Self {
-        Self {}
+        let registry = Registry::default();
+        let metrics = Metrics::default().register(&registry).unwrap();
+        Self { registry, metrics }
+    }
+
+    pub fn metrics_collected(&self) -> Vec<prometheus::proto::MetricFamily> {
+        self.registry.gather()
     }
 }
-impl Default for Config {
+impl Default for State {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+pub enum Network {
+    #[serde(rename = "mainnet")]
+    Mainnet,
+    #[serde(rename = "preprod")]
+    Preprod,
+    #[serde(rename = "preview")]
+    Preview,
+    #[serde(rename = "sanchonet")]
+    Sanchonet,
+}
+impl Display for Network {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Network::Mainnet => write!(f, "mainnet"),
+            Network::Preprod => write!(f, "preprod"),
+            Network::Preview => write!(f, "preview"),
+            Network::Sanchonet => write!(f, "sanchonet"),
+        }
+    }
+}
+impl TryFrom<&str> for Network {
+    type Error = Error;
+
+    fn try_from(value: &str) -> std::prelude::v1::Result<Self, Self::Error> {
+        match value {
+            "mainnet" => Ok(Network::Mainnet),
+            "preprod" => Ok(Network::Preprod),
+            "preview" => Ok(Network::Preview),
+            "sanchonet" => Ok(Network::Sanchonet),
+            network => Err(Error::ParseNetworkError(network.into())),
+        }
     }
 }
 
 pub mod controller;
 pub use crate::controller::*;
 
-mod metrics;
-pub use metrics::Metrics;
+pub mod metrics;
+pub use metrics::*;
 
 mod helpers;
 pub use helpers::*;
