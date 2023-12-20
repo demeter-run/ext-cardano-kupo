@@ -6,10 +6,9 @@ use actix_web::{
 use controller::{metrics as metrics_collector, State};
 use dotenv::dotenv;
 use prometheus::{Encoder, TextEncoder};
-use tracing::error;
 
 #[get("/metrics")]
-async fn metrics(c: Data<State>, _req: HttpRequest) -> impl Responder {
+async fn metrics(c: Data<Arc<State>>, _req: HttpRequest) -> impl Responder {
     let metrics = c.metrics_collected();
     let encoder = TextEncoder::new();
     let mut buffer = vec![];
@@ -26,10 +25,10 @@ async fn health(_: HttpRequest) -> impl Responder {
 async fn main() -> io::Result<()> {
     dotenv().ok();
 
-    let state = Arc::new(State::new());
+    let state = Arc::new(State::default());
 
-    let controller = controller::run(state.clone());
-    let metrics_collector = metrics_collector::run_metrics_collector(state.clone());
+    let controller = tokio::spawn(controller::run(state.clone()));
+    let metrics_collector = tokio::spawn(metrics_collector::run_metrics_collector(state.clone()));
 
     let addr = std::env::var("ADDR").unwrap_or("0.0.0.0:8080".into());
 
@@ -42,11 +41,7 @@ async fn main() -> io::Result<()> {
     })
     .bind(addr)?;
 
-    let result = tokio::join!(controller, metrics_collector, server.run()).1;
-    if let Err(err) = result {
-        error!("{err}");
-        std::process::exit(1)
-    }
+    tokio::join!(controller, metrics_collector, server.run()).2?;
 
     Ok(())
 }
