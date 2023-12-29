@@ -16,6 +16,7 @@ use kube::{
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::{sync::Arc, time::Duration};
+use tracing::{error, info, instrument};
 
 pub static KUPO_PORT_FINALIZER: &str = "kupoports.demeter.run";
 
@@ -103,11 +104,15 @@ async fn reconcile(crd: Arc<KupoPort>, ctx: Arc<Context>) -> Result<Action> {
 }
 
 fn error_policy(crd: Arc<KupoPort>, err: &Error, ctx: Arc<Context>) -> Action {
+    error!(error = err.to_string(), "reconcile failed");
     ctx.metrics.reconcile_failure(&crd, err);
     Action::requeue(Duration::from_secs(5))
 }
 
+#[instrument("controller run", skip_all)]
 pub async fn run(state: Arc<State>) -> Result<(), Error> {
+    info!("listening crds running");
+
     let client = Client::try_default().await?;
     let crds = Api::<KupoPort>::all(client.clone());
     let ctx = Context::new(client, state.metrics.clone());
