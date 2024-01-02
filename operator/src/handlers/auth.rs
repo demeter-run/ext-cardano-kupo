@@ -13,6 +13,7 @@ use kube::{
 use serde::Deserialize;
 use serde_json::{json, Value as JsonValue};
 use std::collections::BTreeMap;
+use tracing::info;
 
 use crate::{
     create_resource, get_acl_name, get_auth_name, get_config, get_resource, kong_consumer,
@@ -47,12 +48,12 @@ async fn handle_auth_secret(
     let result = api.get_opt(&name).await?;
 
     if result.is_some() {
-        println!("Updating auth secret for {}", resource.name_any());
+        info!(resource = resource.name_any(), "Updating secret");
         let patch_params = PatchParams::default();
         api.patch(&name, &patch_params, &Patch::Merge(secret))
             .await?;
     } else {
-        println!("Creating auth secret for {}", resource.name_any());
+        info!(resource = resource.name_any(), "Creating secret");
         let post_params = PostParams::default();
         api.create(&post_params, &secret).await?;
     }
@@ -85,10 +86,10 @@ async fn handle_auth_plugin(
     let (metadata, data, raw) = auth_plugin(resource.clone())?;
 
     if result.is_some() {
-        println!("Updating auth plugin for: {}", resource.name_any());
+        info!(resource = resource.name_any(), "Updating auth plugin");
         patch_resource(client.clone(), namespace, kong_plugin, &name, raw).await?;
     } else {
-        println!("Creating auth plugin for: {}", resource.name_any());
+        info!(resource = resource.name_any(), "Creating auth plugin");
         create_resource(client.clone(), namespace, kong_plugin, metadata, data).await?;
     }
     Ok(())
@@ -153,10 +154,10 @@ async fn handle_consumer(
     let (metadata, data, raw) = consumer(resource.clone())?;
 
     if result.is_some() {
-        println!("Updating consumer for: {}", resource.name_any());
+        info!(resource = resource.name_any(), "Updating consumer");
         patch_resource(client.clone(), namespace, kong_consumer, &name, raw).await?;
     } else {
-        println!("Creating consumer for: {}", resource.name_any());
+        info!(resource = resource.name_any(), "Creating consumer");
         create_resource(client.clone(), namespace, kong_consumer, metadata, data).await?;
     }
     Ok(())

@@ -6,6 +6,7 @@ use actix_web::{
 use controller::{metrics as metrics_collector, State};
 use dotenv::dotenv;
 use prometheus::{Encoder, TextEncoder};
+use tracing::{info, Level};
 
 #[get("/metrics")]
 async fn metrics(c: Data<Arc<State>>, _req: HttpRequest) -> impl Responder {
@@ -25,6 +26,8 @@ async fn health(_: HttpRequest) -> impl Responder {
 async fn main() -> io::Result<()> {
     dotenv().ok();
 
+    tracing_subscriber::fmt().with_max_level(Level::INFO).init();
+
     let state = Arc::new(State::default());
 
     let controller = tokio::spawn(controller::run(state.clone()));
@@ -39,9 +42,15 @@ async fn main() -> io::Result<()> {
             .service(health)
             .service(metrics)
     })
-    .bind(addr)?;
+    .bind(&addr)?;
+    info!({ addr }, "metrics server running");
 
-    tokio::join!(controller, metrics_collector, server.run()).2?;
+    let signal = tokio::spawn(async {
+        tokio::signal::ctrl_c().await.expect("Fail to exit");
+        std::process::exit(0);
+    });
+
+    tokio::join!(server.run(), controller, metrics_collector, signal).0?;
 
     Ok(())
 }
