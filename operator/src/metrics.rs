@@ -4,6 +4,7 @@ use prometheus::{opts, IntCounterVec, Registry};
 use regex::Regex;
 use serde::{Deserialize, Deserializer};
 use std::{sync::Arc, thread::sleep};
+use tracing::{error, info, instrument};
 
 use crate::{get_config, Error, KupoPort, Network, State};
 
@@ -83,19 +84,22 @@ impl Metrics {
     }
 }
 
+#[instrument("metrics collector run", skip_all)]
 pub async fn run_metrics_collector(state: Arc<State>) -> Result<(), Error> {
+    info!("collecting metrics running");
+
     let config = get_config();
     let client = reqwest::Client::builder().build().unwrap();
     let regex = Regex::new(r"httproute\.([\w\d-]+)\.kupo-(\w+).+").unwrap();
-    let mut last_executation = Utc::now();
+    let mut last_execution = Utc::now();
 
     loop {
         sleep(config.metrics_delay);
 
         let end = Utc::now();
-        let start = (end - last_executation).num_seconds();
+        let start = (end - last_execution).num_seconds();
 
-        last_executation = end;
+        last_execution = end;
 
         let query = format!(
                 "sum by (route) (increase(kong_http_requests_total{{service='kupo-v1-ingress-kong-proxy'}}[{start}s] @ {}))",
@@ -108,6 +112,7 @@ pub async fn run_metrics_collector(state: Arc<State>) -> Result<(), Error> {
             .await;
 
         if let Err(err) = result {
+            error!(error = err.to_string(), "error to make prometheus request");
             state
                 .metrics
                 .metrics_failure(&Error::HttpError(err.to_string()));
@@ -117,6 +122,7 @@ pub async fn run_metrics_collector(state: Arc<State>) -> Result<(), Error> {
         let response = result.unwrap();
         let status = response.status();
         if status.is_client_error() || status.is_server_error() {
+            error!(status = status.to_string(), "request status code fail");
             state.metrics.metrics_failure(&Error::HttpError(format!(
                 "Prometheus request error. Status: {} Query: {}",
                 status, query
