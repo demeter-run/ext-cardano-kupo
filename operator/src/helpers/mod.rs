@@ -1,10 +1,12 @@
 use kube::{
-    api::{Patch, PatchParams, PostParams},
+    api::{DeleteParams, Patch, PatchParams, PostParams},
     core::{DynamicObject, ObjectMeta},
     discovery::ApiResource,
     Api, Client,
 };
 use serde_json::json;
+
+use crate::Network;
 
 pub fn http_route() -> ApiResource {
     ApiResource {
@@ -106,4 +108,41 @@ pub async fn patch_resource_status(
     Ok(())
 }
 
-// Similarly define GRPCRoute, KongPlugin, KongConsumer, UtxoRpcPort structs
+pub async fn replace_resource_status(
+    client: Client,
+    namespace: &str,
+    api_resource: ApiResource,
+    name: &str,
+    payload: serde_json::Value,
+) -> Result<(), kube::Error> {
+    let api: Api<DynamicObject> = Api::namespaced_with(client, namespace, &api_resource);
+
+    let status = json!({ "status": payload });
+
+    let post_params = PostParams::default();
+
+    api.replace_status(name, &post_params, status.to_string().into_bytes())
+        .await?;
+
+    Ok(())
+}
+
+pub async fn delete_resource(
+    client: Client,
+    namespace: &str,
+    api_resource: ApiResource,
+    name: &str,
+) -> Result<(), kube::Error> {
+    let api: Api<DynamicObject> = Api::namespaced_with(client, namespace, &api_resource);
+
+    api.delete(name, &DeleteParams::default()).await?;
+
+    Ok(())
+}
+
+pub fn kupo_service_name(network: &Network, prune_utxo: bool) -> String {
+    if prune_utxo {
+        return format!("kupo-{}-pruned", network);
+    }
+    format!("kupo-{}", network)
+}

@@ -8,7 +8,7 @@ use base64::{
 use bech32::ToBase32;
 use k8s_openapi::{api::core::v1::Secret, apimachinery::pkg::apis::meta::v1::OwnerReference};
 use kube::{
-    api::{Patch, PatchParams, PostParams},
+    api::{DeleteParams, Patch, PatchParams, PostParams},
     core::ObjectMeta,
     Api, Client, CustomResourceExt, Resource, ResourceExt,
 };
@@ -17,97 +17,105 @@ use serde_json::json;
 use tracing::info;
 
 use crate::{
-    create_resource, get_auth_name, get_config, get_resource, kong_consumer, kong_plugin,
-    patch_resource, patch_resource_status, Error, KupoPort, KupoPortStatus,
+    create_resource, delete_resource, get_auth_name, get_config, get_resource, kong_consumer,
+    kong_plugin, patch_resource, replace_resource_status, Error, KupoPort,
 };
 
-pub async fn handle_auth(
-    client: Client,
-    namespace: &str,
-    resource: &KupoPort,
-) -> Result<(), Error> {
-    handle_secret(client.clone(), namespace, resource).await?;
-    handle_auth_plugin(client.clone(), namespace, resource).await?;
-    handle_consumer(client.clone(), namespace, resource).await?;
+pub async fn handle_auth(client: Client, crd: &KupoPort) -> Result<(), Error> {
+    handle_secret(client.clone(), crd).await?;
+    handle_auth_plugin(client.clone(), crd).await?;
+    handle_consumer(client.clone(), crd).await?;
+
     Ok(())
 }
 
-async fn handle_secret(client: Client, namespace: &str, resource: &KupoPort) -> Result<(), Error> {
-    let name = get_auth_name(&resource.name_any());
-    let api_key = generate_api_key(&name, namespace).await?;
+async fn handle_secret(client: Client, crd: &KupoPort) -> Result<(), Error> {
+    let namespace = crd.namespace().unwrap();
+    let name = get_auth_name(&crd.name_any());
     let kupo_port = KupoPort::api_resource();
 
-    let api = Api::<Secret>::namespaced(client.clone(), namespace);
-
-    let secret = secret(&name, &api_key, resource.clone());
+    let api = Api::<Secret>::namespaced(client.clone(), &namespace);
     let result = api.get_opt(&name).await?;
 
-    if result.is_some() {
-        info!(resource = resource.name_any(), "Updating secret");
-        let patch_params = PatchParams::default();
-        api.patch(&name, &patch_params, &Patch::Merge(secret))
-            .await?;
-    } else {
-        info!(resource = resource.name_any(), "Creating secret");
-        let post_params = PostParams::default();
-        api.create(&post_params, &secret).await?;
+    let mut status = crd.status.clone().unwrap_or_default();
+
+    if crd.spec.authorization {
+        let api_key = generate_api_key(&name, &namespace).await?;
+        let secret = build_secret(&name, &api_key, crd.clone());
+
+        status.auth_token = Some(api_key);
+
+        if result.is_some() {
+            info!(resource = crd.name_any(), "Updating secret");
+            let patch_params = PatchParams::default();
+            api.patch(&name, &patch_params, &Patch::Merge(secret))
+                .await?;
+        } else {
+            info!(resource = crd.name_any(), "Creating secret");
+            let post_params = PostParams::default();
+            api.create(&post_params, &secret).await?;
+        }
+    } else if result.is_some() {
+        info!(resource = crd.name_any(), "Deleting secret");
+        api.delete(&name, &DeleteParams::default()).await?;
     }
 
-    let status = KupoPortStatus {
-        auth_token: Some(api_key),
-        ..Default::default()
-    };
-
-    patch_resource_status(
+    replace_resource_status(
         client.clone(),
-        namespace,
+        &namespace,
         kupo_port,
-        &resource.name_any(),
+        &crd.name_any(),
         serde_json::to_value(status)?,
     )
     .await?;
+
     Ok(())
 }
 
-async fn handle_auth_plugin(
-    client: Client,
-    namespace: &str,
-    resource: &KupoPort,
-) -> Result<(), Error> {
-    let name = get_auth_name(&resource.name_any());
+async fn handle_auth_plugin(client: Client, crd: &KupoPort) -> Result<(), Error> {
+    let namespace = crd.namespace().unwrap();
+    let name = get_auth_name(&crd.name_any());
     let kong_plugin = kong_plugin();
 
-    let result = get_resource(client.clone(), namespace, &kong_plugin, &name).await?;
-    let (metadata, data, raw) = auth_plugin(resource.clone())?;
+    let result = get_resource(client.clone(), &namespace, &kong_plugin, &name).await?;
 
-    if result.is_some() {
-        info!(resource = resource.name_any(), "Updating auth plugin");
-        patch_resource(client.clone(), namespace, kong_plugin, &name, raw).await?;
-    } else {
-        info!(resource = resource.name_any(), "Creating auth plugin");
-        create_resource(client.clone(), namespace, kong_plugin, metadata, data).await?;
+    if crd.spec.authorization {
+        let (metadata, data, raw) = build_auth_plugin(crd.clone())?;
+        if result.is_some() {
+            info!(resource = crd.name_any(), "Updating auth plugin");
+            patch_resource(client.clone(), &namespace, kong_plugin, &name, raw).await?;
+        } else {
+            info!(resource = crd.name_any(), "Creating auth plugin");
+            create_resource(client.clone(), &namespace, kong_plugin, metadata, data).await?;
+        }
+    } else if result.is_some() {
+        info!(resource = crd.name_any(), "Deleting auth plugin");
+        delete_resource(client.clone(), &namespace, kong_plugin, &name).await?;
     }
     Ok(())
 }
 
-async fn handle_consumer(
-    client: Client,
-    namespace: &str,
-    resource: &KupoPort,
-) -> Result<(), Error> {
-    let name = get_auth_name(&resource.name_any());
+async fn handle_consumer(client: Client, crd: &KupoPort) -> Result<(), Error> {
+    let namespace = crd.namespace().unwrap();
+    let name = get_auth_name(&crd.name_any());
     let kong_consumer = kong_consumer();
 
-    let result = get_resource(client.clone(), namespace, &kong_consumer, &name).await?;
-    let (metadata, data, raw) = consumer(resource.clone())?;
+    let result = get_resource(client.clone(), &namespace, &kong_consumer, &name).await?;
 
-    if result.is_some() {
-        info!(resource = resource.name_any(), "Updating consumer");
-        patch_resource(client.clone(), namespace, kong_consumer, &name, raw).await?;
-    } else {
-        info!(resource = resource.name_any(), "Creating consumer");
-        create_resource(client.clone(), namespace, kong_consumer, metadata, data).await?;
+    if crd.spec.authorization {
+        let (metadata, data, raw) = build_consumer(crd.clone())?;
+        if result.is_some() {
+            info!(resource = crd.name_any(), "Updating consumer");
+            patch_resource(client.clone(), &namespace, kong_consumer, &name, raw).await?;
+        } else {
+            info!(resource = crd.name_any(), "Creating consumer");
+            create_resource(client.clone(), &namespace, kong_consumer, metadata, data).await?;
+        }
+    } else if result.is_some() {
+        info!(resource = crd.name_any(), "Deleting consumer");
+        delete_resource(client.clone(), &namespace, kong_consumer, &name).await?;
     }
+
     Ok(())
 }
 
@@ -130,7 +138,7 @@ async fn generate_api_key(name: &str, namespace: &str) -> Result<String, Error> 
     Ok(with_bech)
 }
 
-fn secret(name: &str, api_key: &str, owner: KupoPort) -> Secret {
+fn build_secret(name: &str, api_key: &str, owner: KupoPort) -> Secret {
     let mut string_data = BTreeMap::new();
     string_data.insert(String::from("key"), String::from(api_key).to_string());
 
@@ -161,7 +169,7 @@ fn secret(name: &str, api_key: &str, owner: KupoPort) -> Secret {
     }
 }
 
-fn auth_plugin(
+fn build_auth_plugin(
     owner: KupoPort,
 ) -> Result<(ObjectMeta, serde_json::Value, serde_json::Value), Error> {
     let kong_plugin = kong_plugin();
@@ -197,7 +205,9 @@ fn auth_plugin(
     Ok((metadata, data, raw))
 }
 
-fn consumer(owner: KupoPort) -> Result<(ObjectMeta, serde_json::Value, serde_json::Value), Error> {
+fn build_consumer(
+    owner: KupoPort,
+) -> Result<(ObjectMeta, serde_json::Value, serde_json::Value), Error> {
     let kong_consumer = kong_consumer();
     let config = get_config();
 
