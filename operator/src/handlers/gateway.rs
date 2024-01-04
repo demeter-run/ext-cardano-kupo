@@ -6,7 +6,7 @@ use tracing::info;
 use crate::{
     create_resource, get_acl_name, get_auth_name, get_config, get_rate_limit_name, get_resource,
     http_route, patch_resource, patch_resource_status, reference_grant, Error, KupoPort,
-    KupoPortStatus,
+    KupoPortStatus, kupo_service_name,
 };
 
 pub async fn handle_http_route(client: Client, crd: &KupoPort) -> Result<(), Error> {

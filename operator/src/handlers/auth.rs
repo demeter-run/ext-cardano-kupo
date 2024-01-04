@@ -49,17 +49,17 @@ async fn handle_auth_secret(client: Client, crd: &KupoPort) -> Result<(), Error>
         status.auth_token = Some(api_key);
 
         if result.is_some() {
-            info!(resource = crd.name_any(), "Updating secret");
+            info!(resource = crd.name_any(), "Updating auth secret");
             let patch_params = PatchParams::default();
             api.patch(&name, &patch_params, &Patch::Merge(secret))
                 .await?;
         } else {
-            info!(resource = crd.name_any(), "Creating secret");
+            info!(resource = crd.name_any(), "Creating auth secret");
             let post_params = PostParams::default();
             api.create(&post_params, &secret).await?;
         }
     } else if result.is_some() {
-        info!(resource = crd.name_any(), "Deleting secret");
+        info!(resource = crd.name_any(), "Deleting auth secret");
         api.delete(&name, &DeleteParams::default()).await?;
     }
 
@@ -104,18 +104,24 @@ async fn handle_acl_secret(client: Client, crd: &KupoPort) -> Result<(), Error> 
 
     let api = Api::<Secret>::namespaced(client.clone(), &namespace);
 
-    let secret = build_acl_secret(&name, crd.clone());
     let result = api.get_opt(&name).await?;
 
-    if result.is_some() {
-        println!("Updating acl secret for {}", crd.name_any());
-        let patch_params = PatchParams::default();
-        api.patch(&name, &patch_params, &Patch::Merge(secret))
-            .await?;
-    } else {
-        println!("Creating acl secret for {}", crd.name_any());
-        let post_params = PostParams::default();
-        api.create(&post_params, &secret).await?;
+    if crd.spec.authorization {
+        let secret = build_acl_secret(&name, crd.clone());
+
+        if result.is_some() {
+            info!(resource = crd.name_any(), "Updating acl secret");
+            let patch_params = PatchParams::default();
+            api.patch(&name, &patch_params, &Patch::Merge(secret))
+                .await?;
+        } else {
+            info!(resource = crd.name_any(), "Creating acl secret");
+            let post_params = PostParams::default();
+            api.create(&post_params, &secret).await?;
+        }
+    } else if result.is_some() {
+        info!(resource = crd.name_any(), "Deleting acl secret");
+        api.delete(&name, &DeleteParams::default()).await?;
     }
 
     Ok(())
@@ -128,14 +134,19 @@ async fn handle_acl_plugin(client: Client, crd: &KupoPort) -> Result<(), Error> 
 
     let result = get_resource(client.clone(), &namespace, &kong_plugin, &name).await?;
     let (metadata, data, raw) = build_acl_plugin(crd.clone())?;
-
-    if result.is_some() {
-        println!("Updating acl plugin for: {}", crd.name_any());
-        patch_resource(client.clone(), &namespace, kong_plugin, &name, raw).await?;
-    } else {
-        println!("Creating acl plugin for: {}", crd.name_any());
-        create_resource(client.clone(), &namespace, kong_plugin, metadata, data).await?;
+    if crd.spec.authorization {
+        if result.is_some() {
+            info!(resource = crd.name_any(), "Updating acl plugin");
+            patch_resource(client.clone(), &namespace, kong_plugin, &name, raw).await?;
+        } else {
+            info!(resource = crd.name_any(), "Creating acl plugin");
+            create_resource(client.clone(), &namespace, kong_plugin, metadata, data).await?;
+        }
+    } else if result.is_some() {
+        info!(resource = crd.name_any(), "Deleting acl plugin");
+        delete_resource(client.clone(), &namespace, kong_plugin, &name).await?;
     }
+
     Ok(())
 }
 
