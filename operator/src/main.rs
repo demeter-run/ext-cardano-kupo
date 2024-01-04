@@ -30,8 +30,8 @@ async fn main() -> io::Result<()> {
 
     let state = Arc::new(State::default());
 
-    let controller = tokio::spawn(controller::run(state.clone()));
-    let metrics_collector = tokio::spawn(metrics_collector::run_metrics_collector(state.clone()));
+    let controller = controller::run(state.clone());
+    let metrics_collector = metrics_collector::run_metrics_collector(state.clone());
 
     let addr = std::env::var("ADDR").unwrap_or("0.0.0.0:8080".into());
 
@@ -45,12 +45,7 @@ async fn main() -> io::Result<()> {
     .bind(&addr)?;
     info!({ addr }, "metrics server running");
 
-    let signal = tokio::spawn(async {
-        tokio::signal::ctrl_c().await.expect("Fail to exit");
-        std::process::exit(0);
-    });
-
-    tokio::join!(server.run(), controller, metrics_collector, signal).0?;
+    tokio::join!(server.run(), controller, metrics_collector,).0?;
 
     Ok(())
 }
