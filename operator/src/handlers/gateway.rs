@@ -1,11 +1,11 @@
 use kube::{core::ObjectMeta, Client, CustomResourceExt, Resource, ResourceExt};
 use serde::Deserialize;
-use serde_json::json;
+use serde_json::{json, Value as JsonValue};
 use tracing::info;
 
 use crate::{
-    create_resource, get_auth_name, get_config, get_rate_limit_name, get_resource, http_route,
-    kupo_service_name, patch_resource, patch_resource_status, reference_grant, Error, KupoPort,
+    create_resource, get_acl_name, get_auth_name, get_config, get_rate_limit_name, get_resource,
+    http_route, patch_resource, patch_resource_status, reference_grant, Error, KupoPort,
     KupoPortStatus,
 };
 
@@ -100,16 +100,17 @@ fn route(
     hostname: &str,
     owner: &KupoPort,
     private_dns_service_name: &str,
-) -> Result<(ObjectMeta, serde_json::Value, serde_json::Value), Error> {
+) -> Result<(ObjectMeta, JsonValue, JsonValue), Error> {
     let config = get_config();
     let http_route = http_route();
     let plugins = format!(
-        "{},{}",
+        "{},{},{}",
         get_auth_name(&owner.name_any()),
-        get_rate_limit_name(&owner.spec.throughput_tier)
+        get_acl_name(&owner.name_any()),
+        get_rate_limit_name(&owner.spec.throughput_tier),
     );
 
-    let metadata: ObjectMeta = ObjectMeta::deserialize(&json!({
+    let metadata = ObjectMeta::deserialize(&json!({
       "name": name,
       "labels": {
         "demeter.run/instance": name,
@@ -167,15 +168,15 @@ fn grant(
     name: &str,
     private_dns_service_name: &str,
     project_namespace: &str,
-) -> Result<(ObjectMeta, serde_json::Value, serde_json::Value), Error> {
+) -> Result<(ObjectMeta, JsonValue, JsonValue), Error> {
     let reference_grant = reference_grant();
     let http_route = http_route();
 
-    let metadata: ObjectMeta = ObjectMeta::deserialize(&json!({
+    let metadata = ObjectMeta::deserialize(&json!({
       "name": name,
     }))?;
 
-    let data: serde_json::Value = json!({
+    let data = json!({
       "spec": {
         "from": [
               {
