@@ -41,9 +41,9 @@ resource "kubernetes_manifest" "customresourcedefinition_kupoports_demeter_run" 
               "type" = "string"
             },
             {
-              "jsonPath" = ".spec.authorization"
-              "name" = "Authorization"
-              "type" = "boolean"
+              "jsonPath" = ".spec.authentication"
+              "name" = "Authentication"
+              "type" = "string"
             },
             {
               "jsonPath" = ".status.authToken"
@@ -58,8 +58,12 @@ resource "kubernetes_manifest" "customresourcedefinition_kupoports_demeter_run" 
               "properties" = {
                 "spec" = {
                   "properties" = {
-                    "authorization" = {
-                      "type" = "boolean"
+                    "authentication" = {
+                      "enum" = [
+                        "none",
+                        "apiKey",
+                      ]
+                      "type" = "string"
                     }
                     "network" = {
                       "enum" = [
@@ -81,7 +85,7 @@ resource "kubernetes_manifest" "customresourcedefinition_kupoports_demeter_run" 
                     }
                   }
                   "required" = [
-                    "authorization",
+                    "authentication",
                     "network",
                     "operatorVersion",
                     "pruneUtxo",

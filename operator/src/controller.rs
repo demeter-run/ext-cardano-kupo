@@ -26,6 +26,13 @@ impl Context {
     }
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub enum Authentication {
+    None,
+    ApiKey,
+}
+
 #[derive(CustomResource, Deserialize, Serialize, Clone, Debug, JsonSchema)]
 #[kube(
     kind = "KupoPort",
@@ -40,7 +47,7 @@ impl Context {
         {"name": "Pruned", "jsonPath": ".spec.pruneUtxo", "type": "boolean"},
         {"name": "Throughput Tier", "jsonPath":".spec.throughputTier", "type": "string"}, 
         {"name": "Endpoint URL", "jsonPath": ".status.endpointUrl", "type": "string"},
-        {"name": "Authorization", "jsonPath": ".spec.authorization", "type": "boolean"},
+        {"name": "Authentication", "jsonPath": ".spec.authentication", "type": "string"},
         {"name": "Auth Token", "jsonPath": ".status.authToken", "type": "string"}
     "#)]
 #[serde(rename_all = "camelCase")]
@@ -50,7 +57,7 @@ pub struct KupoPortSpec {
     pub prune_utxo: bool,
     // throughput should be 0, 1, 2
     pub throughput_tier: String,
-    pub authorization: bool,
+    pub authentication: Authentication,
 }
 
 #[derive(Deserialize, Serialize, Clone, Default, Debug, JsonSchema)]

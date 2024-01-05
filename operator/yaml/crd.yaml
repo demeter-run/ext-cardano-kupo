@@ -26,9 +26,9 @@ spec:
     - jsonPath: .status.endpointUrl
       name: Endpoint URL
       type: string
-    - jsonPath: .spec.authorization
-      name: Authorization
-      type: boolean
+    - jsonPath: .spec.authentication
+      name: Authentication
+      type: string
     - jsonPath: .status.authToken
       name: Auth Token
       type: string
@@ -39,8 +39,11 @@ spec:
         properties:
           spec:
             properties:
-              authorization:
-                type: boolean
+              authentication:
+                enum:
+                - none
+                - apiKey
+                type: string
               network:
                 enum:
                 - mainnet
@@ -55,7 +58,7 @@ spec:
               throughputTier:
                 type: string
             required:
-            - authorization
+            - authentication
             - network
             - operatorVersion
             - pruneUtxo
