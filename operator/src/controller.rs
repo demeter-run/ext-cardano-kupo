@@ -1,18 +1,19 @@
-use crate::{
-    auth::handle_auth,
-    gateway::{handle_http_route, handle_reference_grant},
-    Error, Metrics, Network, Result, State,
-};
 use futures::StreamExt;
 use kube::{
     api::ListParams,
     runtime::{controller::Action, watcher::Config as WatcherConfig, Controller},
-    Api, Client, CustomResource, ResourceExt,
+    Api, Client, CustomResource,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use std::{sync::Arc, time::Duration};
 use tracing::{error, info, instrument};
+
+use crate::{
+    auth::handle_auth,
+    gateway::{handle_http_route, handle_reference_grant},
+    Error, Metrics, Network, Result, State,
+};
 
 pub static KUPO_PORT_FINALIZER: &str = "kupoports.demeter.run";
 
@@ -26,6 +27,13 @@ impl Context {
     }
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+pub enum Authentication {
+    None,
+    ApiKey,
+}
+
 #[derive(CustomResource, Deserialize, Serialize, Clone, Debug, JsonSchema)]
 #[kube(
     kind = "KupoPort",
@@ -35,15 +43,14 @@ impl Context {
     namespaced
 )]
 #[kube(status = "KupoPortStatus")]
-#[kube(
-    printcolumn = r#"
+#[kube(printcolumn = r#"
         {"name": "Network", "jsonPath": ".spec.network", "type": "string"},
         {"name": "Pruned", "jsonPath": ".spec.pruneUtxo", "type": "boolean"},
         {"name": "Throughput Tier", "jsonPath":".spec.throughputTier", "type": "string"}, 
         {"name": "Endpoint URL", "jsonPath": ".status.endpointUrl", "type": "string"},
+        {"name": "Authentication", "jsonPath": ".spec.authentication", "type": "string"},
         {"name": "Auth Token", "jsonPath": ".status.authToken", "type": "string"}
-    "#
-)]
+    "#)]
 #[serde(rename_all = "camelCase")]
 pub struct KupoPortSpec {
     pub operator_version: String,
@@ -51,33 +58,21 @@ pub struct KupoPortSpec {
     pub prune_utxo: bool,
     // throughput should be 0, 1, 2
     pub throughput_tier: String,
+    pub authentication: Authentication,
 }
 
 #[derive(Deserialize, Serialize, Clone, Default, Debug, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct KupoPortStatus {
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub endpoint_url: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub auth_token: Option<String>,
 }
 
-fn build_private_dns_service_name(network: &Network, prune_utxo: bool) -> String {
-    if prune_utxo {
-        return format!("kupo-{}-pruned", network);
-    }
-    format!("kupo-{}", network)
-}
-
 async fn reconcile(crd: Arc<KupoPort>, ctx: Arc<Context>) -> Result<Action> {
-    let client = ctx.client.clone();
-    let namespace = crd.namespace().unwrap();
-
-    let private_dns_service_name =
-        build_private_dns_service_name(&crd.spec.network, crd.spec.prune_utxo);
-    handle_reference_grant(client.clone(), &namespace, &crd, &private_dns_service_name).await?;
-    handle_http_route(client.clone(), &namespace, &crd, &private_dns_service_name).await?;
-    handle_auth(client.clone(), &namespace, &crd).await?;
+    handle_reference_grant(ctx.client.clone(), &crd).await?;
+    handle_http_route(ctx.client.clone(), &crd).await?;
+    handle_auth(ctx.client.clone(), &crd).await?;
 
     Ok(Action::await_change())
 }

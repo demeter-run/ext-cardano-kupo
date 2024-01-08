@@ -6,30 +6,28 @@ use tracing::info;
 use crate::{
     create_resource, get_acl_name, get_auth_name, get_config, get_rate_limit_name, get_resource,
     http_route, patch_resource, patch_resource_status, reference_grant, Error, KupoPort,
-    KupoPortStatus,
+    KupoPortStatus, kupo_service_name,
 };
 
-pub async fn handle_http_route(
-    client: Client,
-    namespace: &str,
-    resource: &KupoPort,
-    private_dns_service_name: &str,
-) -> Result<(), Error> {
-    let name = format!("kupo-{}", resource.name_any());
-    let host_name = build_host(&resource.name_any(), &namespace_to_slug(namespace));
+pub async fn handle_http_route(client: Client, crd: &KupoPort) -> Result<(), Error> {
+    let namespace = crd.namespace().unwrap();
+    let kupo_service = kupo_service_name(&crd.spec.network, crd.spec.prune_utxo);
+
+    let name = format!("kupo-{}", crd.name_any());
+    let host_name = build_host(&crd.name_any(), &namespace_to_slug(&namespace));
     let http_route = http_route();
     let kupo_port = KupoPort::api_resource();
 
-    let result = get_resource(client.clone(), namespace, &http_route, &name).await?;
+    let result = get_resource(client.clone(), &namespace, &http_route, &name).await?;
 
-    let (metadata, data, raw) = route(&name, &host_name, resource, private_dns_service_name)?;
+    let (metadata, data, raw) = route(&name, &host_name, crd, &kupo_service)?;
 
     if result.is_some() {
-        info!(resource = resource.name_any(), "Updating http route");
-        patch_resource(client.clone(), namespace, http_route, &name, raw).await?;
+        info!(resource = crd.name_any(), "Updating http route");
+        patch_resource(client.clone(), &namespace, http_route, &name, raw).await?;
     } else {
-        info!(resource = resource.name_any(), "Creating http route");
-        create_resource(client.clone(), namespace, http_route, metadata, data).await?;
+        info!(resource = crd.name_any(), "Creating http route");
+        create_resource(client.clone(), &namespace, http_route, metadata, data).await?;
     }
 
     let status = KupoPortStatus {
@@ -38,31 +36,29 @@ pub async fn handle_http_route(
     };
     patch_resource_status(
         client.clone(),
-        namespace,
+        &namespace,
         kupo_port,
-        &resource.name_any(),
+        &crd.name_any(),
         serde_json::to_value(status)?,
     )
     .await?;
     Ok(())
 }
 
-pub async fn handle_reference_grant(
-    client: Client,
-    namespace: &str,
-    resource: &KupoPort,
-    private_dns_service_name: &str,
-) -> Result<(), Error> {
-    let name = format!("{}-{}-http", namespace, resource.name_any());
+pub async fn handle_reference_grant(client: Client, crd: &KupoPort) -> Result<(), Error> {
+    let namespace = crd.namespace().unwrap();
+    let kupo_service = kupo_service_name(&crd.spec.network, crd.spec.prune_utxo);
+
+    let name = format!("{}-{}-http", namespace, crd.name_any());
     let reference_grant = reference_grant();
     let config = get_config();
 
     let result = get_resource(client.clone(), &config.namespace, &reference_grant, &name).await?;
 
-    let (metadata, data, raw) = grant(&name, private_dns_service_name, namespace)?;
+    let (metadata, data, raw) = grant(&name, &kupo_service, &namespace)?;
 
     if result.is_some() {
-        info!(resource = resource.name_any(), "Updating reference grant");
+        info!(resource = crd.name_any(), "Updating reference grant");
         patch_resource(
             client.clone(),
             &config.namespace,
@@ -72,7 +68,7 @@ pub async fn handle_reference_grant(
         )
         .await?;
     } else {
-        info!(resource = resource.name_any(), "Creating reference grant");
+        info!(resource = crd.name_any(), "Creating reference grant");
         // we need to get the deserialized payload
         create_resource(
             client.clone(),
