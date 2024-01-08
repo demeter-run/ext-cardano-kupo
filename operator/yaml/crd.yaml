@@ -9,7 +9,7 @@ spec:
     kind: KupoPort
     plural: kupoports
     shortNames:
-    - kp
+    - kpts
     singular: kupoport
   scope: Namespaced
   versions:
@@ -20,7 +20,7 @@ spec:
     - jsonPath: .spec.pruneUtxo
       name: Pruned
       type: boolean
-    - jsonPath: spec.throughputTier
+    - jsonPath: .spec.throughputTier
       name: Throughput Tier
       type: string
     - jsonPath: .status.endpointUrl
@@ -43,28 +43,27 @@ spec:
                 - preview
                 - sanchonet
                 type: string
-              operator_version:
+              operatorVersion:
                 type: string
-              prune_utxo:
+              pruneUtxo:
                 type: boolean
-              throughput_tier:
+              throughputTier:
                 type: string
             required:
             - network
-            - operator_version
-            - prune_utxo
-            - throughput_tier
+            - operatorVersion
+            - pruneUtxo
+            - throughputTier
             type: object
           status:
             nullable: true
             properties:
-              auth_token:
+              authToken:
+                nullable: true
                 type: string
-              endpoint_url:
+              endpointUrl:
+                nullable: true
                 type: string
-            required:
-            - auth_token
-            - endpoint_url
             type: object
         required:
         - spec
