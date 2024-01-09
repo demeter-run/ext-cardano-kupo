@@ -16,14 +16,15 @@ use std::collections::BTreeMap;
 use tracing::info;
 
 use crate::{
-    create_resource, delete_resource, get_acl_name, get_auth_name, get_config, get_resource,
-    kong_consumer, kong_plugin, patch_resource, replace_resource_status, Authentication, Error,
-    KupoPort,
+    create_resource, delete_resource, get_acl_name, get_auth_name, get_config, get_host_key_name,
+    get_resource, kong_consumer, kong_plugin, patch_resource, replace_resource_status,
+    Authentication, Error, KupoPort,
 };
 
 pub async fn handle_auth(client: Client, crd: &KupoPort) -> Result<(), Error> {
     handle_auth_secret(client.clone(), crd).await?;
     handle_auth_plugin(client.clone(), crd).await?;
+    handle_host_key_plugin(client.clone(), crd).await?;
 
     handle_acl_secret(client.clone(), crd).await?;
     handle_acl_plugin(client.clone(), crd).await?;
@@ -102,6 +103,35 @@ async fn handle_auth_plugin(client: Client, crd: &KupoPort) -> Result<(), Error>
         Authentication::None => {
             if result.is_some() {
                 info!(resource = crd.name_any(), "Deleting auth plugin");
+                delete_resource(client.clone(), &namespace, kong_plugin, &name).await?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
+async fn handle_host_key_plugin(client: Client, crd: &KupoPort) -> Result<(), Error> {
+    let namespace = crd.namespace().unwrap();
+    let name = get_host_key_name(&crd.name_any());
+    let kong_plugin = kong_plugin();
+
+    let result = get_resource(client.clone(), &namespace, &kong_plugin, &name).await?;
+
+    match crd.spec.authentication {
+        Authentication::ApiKey => {
+            let (metadata, data, raw) = build_host_key_plugin(crd.clone())?;
+            if result.is_some() {
+                info!(resource = crd.name_any(), "Updating host key plugin");
+                patch_resource(client.clone(), &namespace, kong_plugin, &name, raw).await?;
+            } else {
+                info!(resource = crd.name_any(), "Creating host key plugin");
+                create_resource(client.clone(), &namespace, kong_plugin, metadata, data).await?;
+            }
+        }
+        Authentication::None => {
+            if result.is_some() {
+                info!(resource = crd.name_any(), "Deleting host key plugin");
                 delete_resource(client.clone(), &namespace, kong_plugin, &name).await?;
             }
         }
@@ -270,6 +300,37 @@ fn build_auth_plugin(owner: KupoPort) -> Result<(ObjectMeta, JsonValue, JsonValu
       "config": {
         "key_names": ["dmtr-api-key"],
       }
+    });
+
+    let raw = json!({
+        "apiVersion": kong_plugin.api_version,
+        "kind": kong_plugin.kind,
+        "metadata": metadata,
+        "plugin": data["plugin"],
+        "config": data["config"]
+    });
+
+    Ok((metadata, data, raw))
+}
+
+fn build_host_key_plugin(owner: KupoPort) -> Result<(ObjectMeta, JsonValue, JsonValue), Error> {
+    let kong_plugin = kong_plugin();
+
+    let metadata = ObjectMeta::deserialize(&json!({
+      "name": get_host_key_name(&owner.name_any()),
+      "ownerReferences": [
+        {
+          "apiVersion": KupoPort::api_version(&()).to_string(),
+          "kind": KupoPort::kind(&()).to_string(),
+          "name": owner.name_any(),
+          "uid": owner.uid()
+        }
+      ]
+    }))?;
+
+    let data = json!({
+      "plugin": "key-to-header",
+      "config": {}
     });
 
     let raw = json!({
