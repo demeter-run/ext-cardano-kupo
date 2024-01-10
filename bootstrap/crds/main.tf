@@ -41,8 +41,8 @@ resource "kubernetes_manifest" "customresourcedefinition_kupoports_demeter_run" 
               "type" = "string"
             },
             {
-              "jsonPath" = ".spec.authentication"
-              "name" = "Authentication"
+              "jsonPath" = ".status.endpoint_key_url"
+              "name" = "Endpoint Key URL"
               "type" = "string"
             },
             {
@@ -58,13 +58,6 @@ resource "kubernetes_manifest" "customresourcedefinition_kupoports_demeter_run" 
               "properties" = {
                 "spec" = {
                   "properties" = {
-                    "authentication" = {
-                      "enum" = [
-                        "none",
-                        "apiKey",
-                      ]
-                      "type" = "string"
-                    }
                     "network" = {
                       "enum" = [
                         "mainnet",
@@ -85,7 +78,6 @@ resource "kubernetes_manifest" "customresourcedefinition_kupoports_demeter_run" 
                     }
                   }
                   "required" = [
-                    "authentication",
                     "network",
                     "operatorVersion",
                     "pruneUtxo",
@@ -97,14 +89,20 @@ resource "kubernetes_manifest" "customresourcedefinition_kupoports_demeter_run" 
                   "nullable" = true
                   "properties" = {
                     "authToken" = {
-                      "nullable" = true
+                      "type" = "string"
+                    }
+                    "endpointKeyUrl" = {
                       "type" = "string"
                     }
                     "endpointUrl" = {
-                      "nullable" = true
                       "type" = "string"
                     }
                   }
+                  "required" = [
+                    "authToken",
+                    "endpointKeyUrl",
+                    "endpointUrl",
+                  ]
                   "type" = "object"
                 }
               }
