@@ -2,7 +2,7 @@ use futures::StreamExt;
 use kube::{
     api::ListParams,
     runtime::{controller::Action, watcher::Config as WatcherConfig, Controller},
-    Api, Client, CustomResource,
+    Api, Client, CustomResource, CustomResourceExt, ResourceExt,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -11,8 +11,8 @@ use tracing::{error, info, instrument};
 
 use crate::{
     auth::handle_auth,
-    gateway::{handle_http_route, handle_reference_grant},
-    Error, Metrics, Network, Result, State,
+    gateway::{handle_http_route, handle_http_route_key, handle_reference_grant},
+    patch_resource_status, Error, Metrics, Network, Result, State,
 };
 
 pub static KUPO_PORT_FINALIZER: &str = "kupoports.demeter.run";
@@ -25,13 +25,6 @@ impl Context {
     pub fn new(client: Client, metrics: Metrics) -> Self {
         Self { client, metrics }
     }
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
-#[serde(rename_all = "camelCase")]
-pub enum Authentication {
-    None,
-    ApiKey,
 }
 
 #[derive(CustomResource, Deserialize, Serialize, Clone, Debug, JsonSchema)]
@@ -48,7 +41,7 @@ pub enum Authentication {
         {"name": "Pruned", "jsonPath": ".spec.pruneUtxo", "type": "boolean"},
         {"name": "Throughput Tier", "jsonPath":".spec.throughputTier", "type": "string"}, 
         {"name": "Endpoint URL", "jsonPath": ".status.endpointUrl", "type": "string"},
-        {"name": "Authentication", "jsonPath": ".spec.authentication", "type": "string"},
+        {"name": "Endpoint Key URL", "jsonPath": ".status.endpoint_key_url", "type": "string"},
         {"name": "Auth Token", "jsonPath": ".status.authToken", "type": "string"}
     "#)]
 #[serde(rename_all = "camelCase")]
@@ -58,21 +51,42 @@ pub struct KupoPortSpec {
     pub prune_utxo: bool,
     // throughput should be 0, 1, 2
     pub throughput_tier: String,
-    pub authentication: Authentication,
 }
 
 #[derive(Deserialize, Serialize, Clone, Default, Debug, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct KupoPortStatus {
-    pub endpoint_url: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub auth_token: Option<String>,
+    pub endpoint_url: String,
+    pub endpoint_key_url: String,
+    pub auth_token: String,
 }
 
 async fn reconcile(crd: Arc<KupoPort>, ctx: Arc<Context>) -> Result<Action> {
-    handle_reference_grant(ctx.client.clone(), &crd).await?;
-    handle_http_route(ctx.client.clone(), &crd).await?;
-    handle_auth(ctx.client.clone(), &crd).await?;
+    handle_reference_grant(&ctx.client, &crd).await?;
+
+    let key = handle_auth(&ctx.client, &crd).await?;
+    let hostname = handle_http_route(&ctx.client, &crd).await?;
+    let hostname_key = handle_http_route_key(&ctx.client, &crd, &key).await?;
+
+    let status = KupoPortStatus {
+        endpoint_url: format!("https://{hostname}"),
+        endpoint_key_url: format!("https://{hostname_key}"),
+        auth_token: key,
+    };
+
+    let namespace = crd.namespace().unwrap();
+    let kupo_port = KupoPort::api_resource();
+
+    patch_resource_status(
+        ctx.client.clone(),
+        &namespace,
+        kupo_port,
+        &crd.name_any(),
+        serde_json::to_value(status)?,
+    )
+    .await?;
+
+    info!(resource = crd.name_any(), "Reconcile completed");
 
     Ok(Action::await_change())
 }

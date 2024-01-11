@@ -1,26 +1,25 @@
-use kube::{core::ObjectMeta, Client, CustomResourceExt, Resource, ResourceExt};
+use kube::{core::ObjectMeta, Client, Resource, ResourceExt};
 use serde::Deserialize;
 use serde_json::{json, Value as JsonValue};
 use tracing::info;
 
 use crate::{
-    create_resource, get_acl_name, get_auth_name, get_config, get_rate_limit_name, get_resource,
-    http_route, patch_resource, patch_resource_status, reference_grant, Error, KupoPort,
-    KupoPortStatus, kupo_service_name,
+    create_resource, get_acl_name, get_auth_name, get_config, get_http_route_key_name,
+    get_http_route_name, get_rate_limit_name, get_resource, http_route, kupo_service_name,
+    patch_resource, reference_grant, Error, KupoPort,
 };
 
-pub async fn handle_http_route(client: Client, crd: &KupoPort) -> Result<(), Error> {
+pub async fn handle_http_route(client: &Client, crd: &KupoPort) -> Result<String, Error> {
     let namespace = crd.namespace().unwrap();
     let kupo_service = kupo_service_name(&crd.spec.network, crd.spec.prune_utxo);
 
-    let name = format!("kupo-{}", crd.name_any());
-    let host_name = build_host(&crd.name_any(), &namespace_to_slug(&namespace));
+    let name = get_http_route_name(&crd.name_any());
+    let host_name = build_hostname(&crd.name_any(), &project_id(&namespace), None);
     let http_route = http_route();
-    let kupo_port = KupoPort::api_resource();
 
     let result = get_resource(client.clone(), &namespace, &http_route, &name).await?;
 
-    let (metadata, data, raw) = route(&name, &host_name, crd, &kupo_service)?;
+    let (metadata, data, raw) = build_route(&name, &host_name, crd, &kupo_service)?;
 
     if result.is_some() {
         info!(resource = crd.name_any(), "Updating http route");
@@ -30,22 +29,37 @@ pub async fn handle_http_route(client: Client, crd: &KupoPort) -> Result<(), Err
         create_resource(client.clone(), &namespace, http_route, metadata, data).await?;
     }
 
-    let status = KupoPortStatus {
-        endpoint_url: Some(format!("https://{}", host_name)),
-        ..Default::default()
-    };
-    patch_resource_status(
-        client.clone(),
-        &namespace,
-        kupo_port,
-        &crd.name_any(),
-        serde_json::to_value(status)?,
-    )
-    .await?;
-    Ok(())
+    Ok(host_name)
 }
 
-pub async fn handle_reference_grant(client: Client, crd: &KupoPort) -> Result<(), Error> {
+pub async fn handle_http_route_key(
+    client: &Client,
+    crd: &KupoPort,
+    key: &str,
+) -> Result<String, Error> {
+    let namespace = crd.namespace().unwrap();
+    let kupo_service = kupo_service_name(&crd.spec.network, crd.spec.prune_utxo);
+
+    let name = get_http_route_key_name(&crd.name_any());
+    let host_name = build_hostname(&crd.name_any(), &project_id(&namespace), Some(key));
+    let http_route = http_route();
+
+    let result = get_resource(client.clone(), &namespace, &http_route, &name).await?;
+
+    let (metadata, data, raw) = build_route(&name, &host_name, crd, &kupo_service)?;
+
+    if result.is_some() {
+        info!(resource = crd.name_any(), "Updating http route");
+        patch_resource(client.clone(), &namespace, http_route, &name, raw).await?;
+    } else {
+        info!(resource = crd.name_any(), "Creating http route");
+        create_resource(client.clone(), &namespace, http_route, metadata, data).await?;
+    }
+
+    Ok(host_name)
+}
+
+pub async fn handle_reference_grant(client: &Client, crd: &KupoPort) -> Result<(), Error> {
     let namespace = crd.namespace().unwrap();
     let kupo_service = kupo_service_name(&crd.spec.network, crd.spec.prune_utxo);
 
@@ -55,7 +69,7 @@ pub async fn handle_reference_grant(client: Client, crd: &KupoPort) -> Result<()
 
     let result = get_resource(client.clone(), &config.namespace, &reference_grant, &name).await?;
 
-    let (metadata, data, raw) = grant(&name, &kupo_service, &namespace)?;
+    let (metadata, data, raw) = build_grant(&name, &kupo_service, &namespace)?;
 
     if result.is_some() {
         info!(resource = crd.name_any(), "Updating reference grant");
@@ -69,7 +83,6 @@ pub async fn handle_reference_grant(client: Client, crd: &KupoPort) -> Result<()
         .await?;
     } else {
         info!(resource = crd.name_any(), "Creating reference grant");
-        // we need to get the deserialized payload
         create_resource(
             client.clone(),
             &config.namespace,
@@ -79,35 +92,39 @@ pub async fn handle_reference_grant(client: Client, crd: &KupoPort) -> Result<()
         )
         .await?;
     }
+
     Ok(())
 }
 
-fn build_host(name: &str, project_slug: &str) -> String {
+fn build_hostname(crd_name: &str, project_id: &str, key: Option<&str>) -> String {
     let config = get_config();
+    let ingress_class = &config.ingress_class;
+    let dns_zone = &config.dns_zone;
 
-    format!(
-        "{}-{}.{}.{}",
-        name, project_slug, config.ingress_class, config.dns_zone
-    )
+    if let Some(key) = key {
+        return format!("{key}.{crd_name}-{project_id}.{ingress_class}.{dns_zone}");
+    }
+
+    format!("{crd_name}-{project_id}.{ingress_class}.{dns_zone}")
 }
 
-fn namespace_to_slug(namespace: &str) -> String {
+fn project_id(namespace: &str) -> String {
     namespace.split_once('-').unwrap().1.to_string()
 }
 
-fn route(
+fn build_route(
     name: &str,
     hostname: &str,
-    owner: &KupoPort,
-    private_dns_service_name: &str,
+    crd: &KupoPort,
+    kupo_service: &str,
 ) -> Result<(ObjectMeta, JsonValue, JsonValue), Error> {
     let config = get_config();
     let http_route = http_route();
     let plugins = format!(
         "{},{},{}",
-        get_auth_name(&owner.name_any()),
-        get_acl_name(&owner.name_any()),
-        get_rate_limit_name(&owner.spec.throughput_tier),
+        get_auth_name(&crd.name_any()),
+        get_acl_name(&crd.name_any()),
+        get_rate_limit_name(&crd.spec.throughput_tier),
     );
 
     let metadata = ObjectMeta::deserialize(&json!({
@@ -124,8 +141,8 @@ fn route(
         {
           "apiVersion": KupoPort::api_version(&()).to_string(), // @TODO: try to grab this from the owner
           "kind": KupoPort::kind(&()).to_string(), // @TODO: try to grab this from the owner
-          "name": owner.name_any(),
-          "uid": owner.uid()
+          "name": crd.name_any(),
+          "uid": crd.uid()
         }
       ]
     }))?;
@@ -144,7 +161,7 @@ fn route(
             "backendRefs": [
               {
                 "kind": "Service",
-                "name": private_dns_service_name,
+                "name": kupo_service,
                 "port": config.http_port.parse::<i32>()?,
                 "namespace": config.namespace
               }
@@ -164,10 +181,10 @@ fn route(
     Ok((metadata, data, raw))
 }
 
-fn grant(
+fn build_grant(
     name: &str,
-    private_dns_service_name: &str,
-    project_namespace: &str,
+    kupo_service: &str,
+    namespace: &str,
 ) -> Result<(ObjectMeta, JsonValue, JsonValue), Error> {
     let reference_grant = reference_grant();
     let http_route = http_route();
@@ -182,14 +199,14 @@ fn grant(
               {
                   "group": http_route.group,
                   "kind": http_route.kind,
-                  "namespace": project_namespace,
+                  "namespace": namespace,
               },
             ],
         "to": [
             {
                 "group": "",
                 "kind": "Service",
-                "name": private_dns_service_name,
+                "name": kupo_service,
             },
         ],
       }
