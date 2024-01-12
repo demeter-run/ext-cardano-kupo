@@ -6,37 +6,7 @@ use kube::{
 };
 use serde_json::json;
 
-use crate::Network;
-
-pub fn http_route() -> ApiResource {
-    ApiResource {
-        group: "gateway.networking.k8s.io".into(),
-        version: "v1".into(),
-        api_version: "gateway.networking.k8s.io/v1".into(),
-        kind: "HTTPRoute".into(),
-        plural: "httproutes".into(),
-    }
-}
-
-pub fn reference_grant() -> ApiResource {
-    ApiResource {
-        group: "gateway.networking.k8s.io".into(),
-        version: "v1beta1".into(),
-        api_version: "gateway.networking.k8s.io/v1beta1".into(),
-        kind: "ReferenceGrant".into(),
-        plural: "referencegrants".into(),
-    }
-}
-
-pub fn kong_plugin() -> ApiResource {
-    ApiResource {
-        group: "configuration.konghq.com".into(),
-        version: "v1".into(),
-        api_version: "configuration.konghq.com/v1".into(),
-        kind: "KongPlugin".into(),
-        plural: "kongplugins".into(),
-    }
-}
+use crate::{get_config, Network};
 
 pub fn kong_consumer() -> ApiResource {
     ApiResource {
@@ -87,8 +57,10 @@ pub async fn patch_resource(
     let api: Api<DynamicObject> = Api::namespaced_with(client, namespace, &api_resource);
 
     let patch_params = PatchParams::default();
-    api.patch(name, &patch_params, &Patch::Merge(payload))
-        .await?;
+    let patch_payload = Patch::Merge(payload);
+
+    api.patch(name, &patch_params, &patch_payload).await?;
+
     Ok(())
 }
 
@@ -103,38 +75,20 @@ pub async fn patch_resource_status(
 
     let status = json!({ "status": payload });
     let patch_params = PatchParams::default();
-    api.patch_status(name, &patch_params, &Patch::Merge(status))
+    let patch_payload = Patch::Merge(status);
+
+    api.patch_status(name, &patch_params, &patch_payload)
         .await?;
     Ok(())
 }
 
-pub fn kupo_service_name(network: &Network, prune_utxo: bool) -> String {
-    if prune_utxo {
-        return format!("kupo-{}-pruned", network);
-    }
-    format!("kupo-{}", network)
-}
+pub fn build_hostname(network: &Network, key: &str) -> (String, String) {
+    let config = get_config();
+    let ingress_class = &config.ingress_class;
+    let dns_zone = &config.dns_zone;
 
-pub fn get_http_route_name(name: &str) -> String {
-    format!("kupo-http-route-{}", name)
-}
+    let hostname = format!("{network}.{ingress_class}.{dns_zone}");
+    let hostname_key = format!("{key}.{network}.{ingress_class}.{dns_zone}");
 
-pub fn get_http_route_key_name(name: &str) -> String {
-    format!("kupo-http-route-key-{}", name)
-}
-
-pub fn get_auth_name(name: &str) -> String {
-    format!("kupo-auth-{}", name)
-}
-
-pub fn get_host_key_name(name: &str) -> String {
-    format!("kupo-host-key-{}", name)
-}
-
-pub fn get_rate_limit_name(tier: &str) -> String {
-    format!("rate-limiting-kupo-tier-{}", tier)
-}
-
-pub fn get_acl_name(name: &str) -> String {
-    format!("kupo-acl-{}", name)
+    (hostname, hostname_key)
 }

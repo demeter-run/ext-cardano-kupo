@@ -10,14 +10,8 @@ pub enum Error {
     #[error("Kube Error: {0}")]
     KubeError(#[source] kube::Error),
 
-    #[error("Finalizer Error: {0}")]
-    FinalizerError(#[source] Box<kube::runtime::finalizer::Error<Error>>),
-
     #[error("Deserialize Error: {0}")]
     DeserializeError(#[source] serde_json::Error),
-
-    #[error("Parse Int error: {0}")]
-    ParseIntError(#[source] std::num::ParseIntError),
 
     #[error("Parse Network error: {0}")]
     ParseNetworkError(String),
@@ -43,12 +37,6 @@ impl From<serde_json::Error> for Error {
 impl From<kube::Error> for Error {
     fn from(value: kube::Error) -> Self {
         Error::KubeError(value)
-    }
-}
-
-impl From<std::num::ParseIntError> for Error {
-    fn from(value: std::num::ParseIntError) -> Self {
-        Error::ParseIntError(value)
     }
 }
 
