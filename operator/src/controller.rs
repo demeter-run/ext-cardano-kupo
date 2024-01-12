@@ -10,9 +10,8 @@ use std::{sync::Arc, time::Duration};
 use tracing::{error, info, instrument};
 
 use crate::{
-    auth::handle_auth,
-    gateway::{handle_http_route, handle_http_route_key, handle_reference_grant},
-    patch_resource_status, Error, Metrics, Network, Result, State,
+    auth::handle_auth, build_hostname, patch_resource_status, Error, Metrics, Network, Result,
+    State,
 };
 
 pub static KUPO_PORT_FINALIZER: &str = "kupoports.demeter.run";
@@ -41,7 +40,7 @@ impl Context {
         {"name": "Pruned", "jsonPath": ".spec.pruneUtxo", "type": "boolean"},
         {"name": "Throughput Tier", "jsonPath":".spec.throughputTier", "type": "string"}, 
         {"name": "Endpoint URL", "jsonPath": ".status.endpointUrl", "type": "string"},
-        {"name": "Endpoint Key URL", "jsonPath": ".status.endpoint_key_url", "type": "string"},
+        {"name": "Authenticated Endpoint URL", "jsonPath": ".status.authenticatedEndpointUrl", "type": "string"},
         {"name": "Auth Token", "jsonPath": ".status.authToken", "type": "string"}
     "#)]
 #[serde(rename_all = "camelCase")]
@@ -57,20 +56,18 @@ pub struct KupoPortSpec {
 #[serde(rename_all = "camelCase")]
 pub struct KupoPortStatus {
     pub endpoint_url: String,
-    pub endpoint_key_url: String,
+    pub authenticated_endpoint_url: String,
     pub auth_token: String,
 }
 
 async fn reconcile(crd: Arc<KupoPort>, ctx: Arc<Context>) -> Result<Action> {
-    handle_reference_grant(&ctx.client, &crd).await?;
-
     let key = handle_auth(&ctx.client, &crd).await?;
-    let hostname = handle_http_route(&ctx.client, &crd).await?;
-    let hostname_key = handle_http_route_key(&ctx.client, &crd, &key).await?;
+
+    let (hostname, hostname_key) = build_hostname(&crd.spec.network, &key);
 
     let status = KupoPortStatus {
-        endpoint_url: format!("https://{hostname}"),
-        endpoint_key_url: format!("https://{hostname_key}"),
+        endpoint_url: format!("https://{hostname}",),
+        authenticated_endpoint_url: format!("https://{hostname_key}"),
         auth_token: key,
     };
 

@@ -91,7 +91,7 @@ pub async fn run_metrics_collector(state: Arc<State>) {
 
         let config = get_config();
         let client = reqwest::Client::builder().build().unwrap();
-        let regex = Regex::new(r"httproute\.([\w\d-]+)\.kupo-(\w+).+").unwrap();
+        let regex = Regex::new(r"(.+)\.(.+)-.+").unwrap();
         let mut last_execution = Utc::now();
 
         loop {
@@ -103,7 +103,7 @@ pub async fn run_metrics_collector(state: Arc<State>) {
             last_execution = end;
 
             let query = format!(
-                    "sum by (route) (increase(kong_http_requests_total{{service='kupo-v1-ingress-kong-proxy'}}[{start}s] @ {}))",
+                    "sum by (consumer) (increase(kong_http_requests_total{{service='kupo-v1-ingress-kong-proxy'}}[{start}s] @ {}))",
                     end.timestamp_millis() / 1000
                 );
 
@@ -134,24 +134,26 @@ pub async fn run_metrics_collector(state: Arc<State>) {
             let response = response.json::<PrometheusResponse>().await.unwrap();
 
             for result in response.data.result {
-                let captures = regex.captures(&result.metric.route).unwrap();
+                if let Some(consumer) = result.metric.consumer {
+                    let captures = regex.captures(&consumer).unwrap();
 
-                let namespace = captures.get(1).unwrap().as_str();
-                let network: Network = captures.get(2).unwrap().as_str().try_into().unwrap();
+                    let namespace = captures.get(1).unwrap().as_str();
+                    let network: Network = captures.get(2).unwrap().as_str().try_into().unwrap();
 
-                if result.value == 0.0 {
-                    continue;
+                    if result.value == 0.0 {
+                        continue;
+                    }
+
+                    let dcu_per_request = match network {
+                        Network::Mainnet => config.dcu_per_request_mainnet,
+                        Network::Preprod => config.dcu_per_request_preprod,
+                        Network::Preview => config.dcu_per_request_preview,
+                        Network::Sanchonet => config.dcu_per_request_sanchonet,
+                    };
+
+                    let dcu = result.value * dcu_per_request;
+                    state.metrics.count_dcu_consumed(namespace, network, dcu);
                 }
-
-                let dcu_per_request = match network {
-                    Network::Mainnet => config.dcu_per_request_mainnet,
-                    Network::Preprod => config.dcu_per_request_preprod,
-                    Network::Preview => config.dcu_per_request_preview,
-                    Network::Sanchonet => config.dcu_per_request_sanchonet,
-                };
-
-                let dcu = result.value * dcu_per_request;
-                state.metrics.count_dcu_consumed(namespace, network, dcu);
             }
         }
     });
@@ -159,7 +161,7 @@ pub async fn run_metrics_collector(state: Arc<State>) {
 
 #[derive(Deserialize)]
 struct PrometheusDataResultMetric {
-    route: String,
+    consumer: Option<String>,
 }
 
 #[derive(Deserialize)]
