@@ -1,11 +1,15 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: prj-mainnet-test
+---
 apiVersion: demeter.run/v1alpha1
 kind: KupoPort
 metadata:
   name: kupo-port-a123ds
-  namespace: prj-yeti-project-3f5c95
+  namespace: prj-mainnet-test
 spec:
   operatorVersion: "1"
   network: mainnet
   pruneUtxo: false
   throughputTier: "0"
-
