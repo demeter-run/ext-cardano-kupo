@@ -16,7 +16,8 @@ use std::collections::BTreeMap;
 use tracing::info;
 
 use crate::{
-    create_resource, get_config, get_resource, kong_consumer, patch_resource, Error, KupoPort,
+    create_resource, get_config, get_rate_limit_name, get_resource, kong_consumer, patch_resource,
+    Error, KupoPort,
 };
 
 pub async fn handle_auth(client: &Client, crd: &KupoPort) -> Result<String, Error> {
@@ -140,6 +141,7 @@ fn build_consumer(crd: &KupoPort) -> Result<(ObjectMeta, JsonValue, JsonValue), 
       "name": build_auth_name(&crd.name_any()),
       "annotations": {
         "kubernetes.io/ingress.class": config.ingress_class,
+        "konghq.com/plugins": get_rate_limit_name(&crd.spec.throughput_tier)
       },
       "ownerReferences": [
         {
