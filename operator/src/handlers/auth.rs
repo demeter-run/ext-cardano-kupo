@@ -16,20 +16,20 @@ use std::collections::BTreeMap;
 use tracing::info;
 
 use crate::{
-    create_resource, get_config, get_rate_limit_name, get_resource, kong_consumer, patch_resource,
-    Error, KupoPort,
+    create_resource, get_config, get_resource, kong_consumer, patch_resource, Error, KupoPort,
 };
 
 pub async fn handle_auth(client: &Client, crd: &KupoPort) -> Result<String, Error> {
     let key = build_api_key(crd).await?;
 
-    handle_secret(client, crd, &key).await?;
+    handle_auth_secret(client, crd, &key).await?;
+    handle_acl_secret(client, crd).await?;
     handle_consumer(client, crd).await?;
 
     Ok(key)
 }
 
-async fn handle_secret(client: &Client, crd: &KupoPort, key: &str) -> Result<(), Error> {
+async fn handle_auth_secret(client: &Client, crd: &KupoPort, key: &str) -> Result<(), Error> {
     let namespace = crd.namespace().unwrap();
     let name = build_auth_name(&crd.name_any());
     let secret = build_auth_secret(crd, key);
@@ -46,6 +46,32 @@ async fn handle_secret(client: &Client, crd: &KupoPort, key: &str) -> Result<(),
         api.patch(&name, &patch_params, &patch_data).await?;
     } else {
         info!(resource = crd.name_any(), "Creating auth secret");
+
+        let post_params = PostParams::default();
+
+        api.create(&post_params, &secret).await?;
+    }
+
+    Ok(())
+}
+
+async fn handle_acl_secret(client: &Client, crd: &KupoPort) -> Result<(), Error> {
+    let namespace = crd.namespace().unwrap();
+    let name = build_acl_name(&crd.name_any());
+    let secret = build_acl_secret(crd);
+
+    let api = Api::<Secret>::namespaced(client.clone(), &namespace);
+    let result = api.get_opt(&name).await?;
+
+    if result.is_some() {
+        info!(resource = crd.name_any(), "Updating acl secret");
+
+        let patch_params = PatchParams::default();
+        let patch_data = Patch::Merge(secret);
+
+        api.patch(&name, &patch_params, &patch_data).await?;
+    } else {
+        info!(resource = crd.name_any(), "Creating acl secret");
 
         let post_params = PostParams::default();
 
@@ -101,6 +127,14 @@ fn build_auth_name(name: &str) -> String {
     format!("kupo-auth-{name}")
 }
 
+fn build_acl_name(name: &str) -> String {
+    format!("kupo-acl-{name}")
+}
+
+fn build_rate_limit_name(tier: &str) -> String {
+    format!("rate-limiting-kupo-tier-{}", tier)
+}
+
 fn build_auth_secret(crd: &KupoPort, api_key: &str) -> Secret {
     let mut string_data = BTreeMap::new();
     string_data.insert("key".into(), api_key.into());
@@ -110,6 +144,34 @@ fn build_auth_secret(crd: &KupoPort, api_key: &str) -> Secret {
 
     let metadata = ObjectMeta {
         name: Some(build_auth_name(&crd.name_any())),
+        owner_references: Some(vec![OwnerReference {
+            api_version: KupoPort::api_version(&()).to_string(),
+            kind: KupoPort::kind(&()).to_string(),
+            name: crd.name_any(),
+            uid: crd.uid().unwrap(),
+            ..Default::default()
+        }]),
+        labels: Some(labels),
+        ..Default::default()
+    };
+
+    Secret {
+        type_: Some(String::from("Opaque")),
+        metadata,
+        string_data: Some(string_data),
+        ..Default::default()
+    }
+}
+
+fn build_acl_secret(crd: &KupoPort) -> Secret {
+    let mut string_data = BTreeMap::new();
+    string_data.insert("group".into(), crd.spec.network.to_string());
+
+    let mut labels = BTreeMap::new();
+    labels.insert("konghq.com/credential".into(), "acl".into());
+
+    let metadata = ObjectMeta {
+        name: Some(build_acl_name(&crd.name_any())),
         owner_references: Some(vec![OwnerReference {
             api_version: KupoPort::api_version(&()).to_string(),
             kind: KupoPort::kind(&()).to_string(),
@@ -141,7 +203,7 @@ fn build_consumer(crd: &KupoPort) -> Result<(ObjectMeta, JsonValue, JsonValue), 
       "name": build_auth_name(&crd.name_any()),
       "annotations": {
         "kubernetes.io/ingress.class": config.ingress_class,
-        "konghq.com/plugins": get_rate_limit_name(&crd.spec.throughput_tier)
+        "konghq.com/plugins": build_rate_limit_name(&crd.spec.throughput_tier)
       },
       "ownerReferences": [
         {
@@ -155,7 +217,7 @@ fn build_consumer(crd: &KupoPort) -> Result<(ObjectMeta, JsonValue, JsonValue), 
 
     let data = json!({
       "username": username,
-      "credentials": [build_auth_name(&crd.name_any())]
+      "credentials": [build_auth_name(&crd.name_any()), build_acl_name(&crd.name_any())]
     });
 
     let raw = json!({
