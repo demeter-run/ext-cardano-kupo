@@ -1,6 +1,5 @@
 use futures::StreamExt;
 use kube::{
-    api::ListParams,
     runtime::{controller::Action, watcher::Config as WatcherConfig, Controller},
     Api, Client, CustomResource, CustomResourceExt, ResourceExt,
 };
@@ -103,10 +102,6 @@ pub async fn run(state: Arc<State>) {
         .expect("failed to create kube client");
 
     let crds = Api::<KupoPort>::all(client.clone());
-    if let Err(e) = crds.list(&ListParams::default().limit(1)).await {
-        error!("CRD is not queryable; {e:?}. Is the CRD installed?");
-        std::process::exit(1);
-    }
 
     let ctx = Context::new(client, state.metrics.clone());
 
