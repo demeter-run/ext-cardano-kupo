@@ -55,7 +55,7 @@ pub struct KupoPortSpec {
 #[serde(rename_all = "camelCase")]
 pub struct KupoPortStatus {
     pub endpoint_url: String,
-    pub authenticated_endpoint_url: String,
+    pub authenticated_endpoint_url: Option<String>,
     pub auth_token: String,
 }
 
@@ -66,7 +66,7 @@ async fn reconcile(crd: Arc<KupoPort>, ctx: Arc<Context>) -> Result<Action> {
 
     let status = KupoPortStatus {
         endpoint_url: format!("https://{hostname}",),
-        authenticated_endpoint_url: format!("https://{hostname_key}"),
+        authenticated_endpoint_url: format!("https://{hostname_key}").into(),
         auth_token: key,
     };
 
