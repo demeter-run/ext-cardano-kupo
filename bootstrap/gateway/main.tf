@@ -14,12 +14,17 @@ variable "extension_name" {
   type = string
 }
 
+variable "networks" {
+  type = set(string)
+}
+
 resource "helm_release" "ingress" {
   name             = "${var.extension_name}-ingress"
   repository       = "https://charts.konghq.com"
   chart            = "kong"
   create_namespace = false
   namespace        = var.namespace
+  version          = "2.34.0"
 
   set {
     name  = "certificates.enabled"
@@ -45,6 +50,27 @@ resource "helm_release" "ingress" {
     name  = "env.router_flavor"
     value = "traditional_compatible"
   }
+
+  set {
+    name  = "env.plugins"
+    value = "bundled\\,key-to-header"
+  }
+
+  set {
+    name  = "env.allow_debug_header"
+    value = "true"
+  }
+
+  set {
+    name  = "plugins.configMaps[0].name"
+    value = "kong-plugin-key-to-header"
+  }
+
+  set {
+    name  = "plugins.configMaps[0].pluginName"
+    value = "key-to-header"
+  }
+
   set {
     name  = "resources.requests.cpu"
     value = "500m"
@@ -240,7 +266,7 @@ resource "kubernetes_manifest" "prometheus_plugin" {
     "apiVersion" = "configuration.konghq.com/v1"
     "kind"       = "KongClusterPlugin"
     "metadata" = {
-      "name"      = "prometheus-${var.extension_name}"
+      "name" = "prometheus-${var.extension_name}"
       "annotations" = {
         "kubernetes.io/ingress.class" = var.extension_name
       }
@@ -275,6 +301,27 @@ resource "kubernetes_manifest" "certificate_cluster_wildcard_tls" {
         "name" = "letsencrypt"
       }
       "secretName" = "${var.extension_name}-wildcard-tls"
+    }
+  }
+}
+
+resource "kubernetes_manifest" "certificate_cluster_wildcard_tls_by_network" {
+  for_each = var.networks
+  manifest = {
+    "apiVersion" = "cert-manager.io/v1"
+    "kind"       = "Certificate"
+    "metadata" = {
+      "name"      = "${each.key}-${var.extension_name}-wildcard-tls"
+      "namespace" = var.namespace
+    }
+    "spec" = {
+      "dnsNames" = ["*.${each.key}.${var.extension_name}.demeter.run"]
+
+      "issuerRef" = {
+        "kind" = "ClusterIssuer"
+        "name" = "letsencrypt"
+      }
+      "secretName" = "${each.key}-${var.extension_name}-wildcard-tls"
     }
   }
 }

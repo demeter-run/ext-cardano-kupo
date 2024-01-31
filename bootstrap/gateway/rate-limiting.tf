@@ -22,8 +22,8 @@ resource "kubernetes_manifest" "rate_limiting_cluster_plugin" {
       "annotations" = {
         "kubernetes.io/ingress.class" = var.extension_name
       }
-      "labels": {
-        "global": "false"
+      "labels" : {
+        "global" : "false"
       }
     }
     "config" = {

@@ -5,7 +5,7 @@ variable "namespace" {
 variable "operator_image_tag" {}
 
 
-variable "scrape_interval" {
+variable "metrics_delay" {
   description = "the inverval for polling metrics data (in seconds)"
   default     = "30"
 }
@@ -14,6 +14,13 @@ variable "per_min_dcus" {
   default = {
     "mainnet" : 36,
     "default" : 16,
+  }
+}
+
+variable "per_request_dcus" {
+  default = {
+    "mainnet" : 10,
+    "default" : 5,
   }
 }
 
