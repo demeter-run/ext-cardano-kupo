@@ -254,7 +254,68 @@ resource "kubernetes_manifest" "gateway" {
               }
             ]
           }
+        },
+        {
+          "allowedRoutes" : {
+            "namespaces" : {
+              "from" : "All"
+            }
+          }
+          "name" : "authenticated-mainnet"
+          "hostname" : "*.mainnet.${var.extension_name}.${var.dns_zone}"
+          "port" : 443
+          "protocol" : "HTTPS"
+          "tls" : {
+            "certificateRefs" : [
+              {
+                "group" : "",
+                "kind" : "Secret",
+                "name" : "mainnet-${var.extension_name}-wildcard-tls"
+              }
+            ]
+          }
+        },
+        {
+          "allowedRoutes" : {
+            "namespaces" : {
+              "from" : "All"
+            }
+          }
+          "name" : "authenticated-preview"
+          "hostname" : "*.preview.${var.extension_name}.${var.dns_zone}"
+          "port" : 443
+          "protocol" : "HTTPS"
+          "tls" : {
+            "certificateRefs" : [
+              {
+                "group" : "",
+                "kind" : "Secret",
+                "name" : "preview-${var.extension_name}-wildcard-tls"
+              }
+            ]
+          }
+        },
+        {
+          "allowedRoutes" : {
+            "namespaces" : {
+              "from" : "All"
+            }
+          }
+          "name" : "authenticated-preprod"
+          "hostname" : "*.preprod.${var.extension_name}.${var.dns_zone}"
+          "port" : 443
+          "protocol" : "HTTPS"
+          "tls" : {
+            "certificateRefs" : [
+              {
+                "group" : "",
+                "kind" : "Secret",
+                "name" : "preprod-${var.extension_name}-wildcard-tls"
+              }
+            ]
+          }
         }
+
       ]
     }
   }
@@ -325,4 +386,3 @@ resource "kubernetes_manifest" "certificate_cluster_wildcard_tls_by_network" {
     }
   }
 }
-
