@@ -132,10 +132,15 @@ pub async fn run_metrics_collector(state: Arc<State>) {
             }
 
             let response = response.json::<PrometheusResponse>().await.unwrap();
-
             for result in response.data.result {
                 if let Some(consumer) = result.metric.consumer {
-                    let captures = regex.captures(&consumer).unwrap();
+                    let captures = regex.captures(&consumer);
+
+                    if captures.is_none() {
+                        continue;
+                    }
+
+                    let captures = captures.unwrap();
 
                     let namespace = captures.get(1).unwrap().as_str();
                     let network: Network = captures.get(2).unwrap().as_str().try_into().unwrap();
