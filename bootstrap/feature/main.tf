@@ -7,7 +7,7 @@ variable "operator_image_tag" {}
 
 variable "metrics_delay" {
   description = "the inverval for polling metrics data (in seconds)"
-  default     = "30"
+  default     = "60"
 }
 
 variable "per_min_dcus" {
