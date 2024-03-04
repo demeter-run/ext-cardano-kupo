@@ -88,14 +88,14 @@ pub fn build_hostname(
     kupo_version: &Option<String>,
 ) -> (String, String) {
     let config = get_config();
-    let ingress_class = &config.ingress_class;
+    let extension_subdomain = &config.extension_subdomain;
     let dns_zone = &config.dns_zone;
     let version = kupo_version
         .clone()
         .unwrap_or(config.default_kupo_version.to_string());
 
-    let hostname = format!("{network}-v{version}.{ingress_class}.{dns_zone}");
-    let hostname_key = format!("{key}.{network}-v{version}.{ingress_class}.{dns_zone}");
+    let hostname = format!("{network}-v{version}.{extension_subdomain}.{dns_zone}");
+    let hostname_key = format!("{key}.{network}-v{version}.{extension_subdomain}.{dns_zone}");
 
     (hostname, hostname_key)
 }

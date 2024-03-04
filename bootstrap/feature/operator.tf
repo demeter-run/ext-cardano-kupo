@@ -91,6 +91,11 @@ resource "kubernetes_deployment_v1" "operator" {
           }
 
           env {
+            name  = "EXTENSION_SUBDOMAIN"
+            value = var.extension_subdomain
+          }
+
+          env {
             name  = "DNS_ZONE"
             value = var.dns_zone
           }

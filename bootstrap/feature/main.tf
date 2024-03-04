@@ -36,6 +36,10 @@ variable "ingress_class" {
   type = string
 }
 
+variable "extension_subdomain" {
+  type = string
+}
+
 variable "dns_zone" {
   default = "demeter.run"
 }
