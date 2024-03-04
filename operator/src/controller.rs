@@ -1,6 +1,5 @@
 use futures::StreamExt;
 use kube::{
-    core::object::HasSpec,
     runtime::{controller::Action, watcher::Config as WatcherConfig, Controller},
     Api, Client, CustomResource, CustomResourceExt, ResourceExt,
 };

@@ -1,5 +1,3 @@
-use std::default;
-
 use kube::{
     api::{Patch, PatchParams, PostParams},
     core::{DynamicObject, ObjectMeta},
