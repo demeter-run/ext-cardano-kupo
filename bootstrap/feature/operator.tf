@@ -27,12 +27,12 @@ resource "kubernetes_deployment_v1" "operator" {
 
       spec {
         container {
-          image   = "ghcr.io/demeter-run/ext-cardano-kupo-operator:${var.operator_image_tag}"
-          name    = "main"
+          image = "ghcr.io/demeter-run/ext-cardano-kupo-operator:${var.operator_image_tag}"
+          name  = "main"
 
           env {
-            name  = "PORT"
-            value = 9946
+            name  = "ADDR"
+            value = "0.0.0.0:9946"
           }
 
           env {
@@ -41,23 +41,33 @@ resource "kubernetes_deployment_v1" "operator" {
           }
 
           env {
-            name  = "PROMETHEUS_QUERY_ENDPOINT"
-            value = "http://prometheus-operated.default.svc.cluster.local:9090"
+            name  = "PROMETHEUS_URL"
+            value = "http://prometheus-operated.demeter-system.svc.cluster.local:9090/api/v1"
           }
 
           env {
-            name  = "SCRAPE_INTERVAL_S"
-            value = var.scrape_interval
+            name  = "METRICS_DELAY"
+            value = var.metrics_delay
           }
 
           env {
-            name  = "PER_MIN_DCUS_MAINNET"
-            value = var.per_min_dcus["mainnet"]
+            name  = "DCU_PER_REQUEST_MAINNET"
+            value = var.per_request_dcus["mainnet"]
           }
 
           env {
-            name  = "PER_MIN_DCUS_DEFAULT"
-            value = var.per_min_dcus["default"]
+            name  = "DCU_PER_REQUEST_PREPROD"
+            value = var.per_request_dcus["default"]
+          }
+
+          env {
+            name  = "DCU_PER_REQUEST_PREVIEW"
+            value = var.per_request_dcus["default"]
+          }
+
+          env {
+            name  = "DCU_PER_REQUEST_SANCHONET"
+            value = var.per_request_dcus["default"]
           }
 
           env {
@@ -81,17 +91,17 @@ resource "kubernetes_deployment_v1" "operator" {
           }
 
           env {
-            name = "DNS_ZONE"
+            name  = "DNS_ZONE"
             value = var.dns_zone
           }
 
           resources {
             limits = {
-              memory = "256Mi"
+              memory = "512Mi"
             }
             requests = {
               cpu    = "50m"
-              memory = "256Mi"
+              memory = "512Mi"
             }
           }
 
@@ -126,4 +136,3 @@ resource "kubernetes_deployment_v1" "operator" {
     }
   }
 }
-
