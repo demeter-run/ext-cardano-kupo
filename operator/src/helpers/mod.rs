@@ -1,3 +1,5 @@
+use std::default;
+
 use kube::{
     api::{Patch, PatchParams, PostParams},
     core::{DynamicObject, ObjectMeta},
@@ -82,13 +84,54 @@ pub async fn patch_resource_status(
     Ok(())
 }
 
-pub fn build_hostname(network: &Network, key: &str) -> (String, String) {
+pub fn build_hostname(
+    network: &Network,
+    key: &str,
+    kupo_version: &Option<String>,
+) -> (String, String) {
     let config = get_config();
     let ingress_class = &config.ingress_class;
     let dns_zone = &config.dns_zone;
+    let version = kupo_version
+        .clone()
+        .unwrap_or(config.default_kupo_version.to_string());
 
-    let hostname = format!("{network}.{ingress_class}.{dns_zone}");
-    let hostname_key = format!("{key}.{network}.{ingress_class}.{dns_zone}");
+    let hostname = format!("{network}-v{version}.{ingress_class}.{dns_zone}");
+    let hostname_key = format!("{key}.{network}-v{version}.{ingress_class}.{dns_zone}");
 
     (hostname, hostname_key)
+}
+
+#[cfg(test)]
+mod tests {
+    use std::env;
+
+    use super::*;
+
+    #[test]
+    fn test_build_hostname() {
+        env::set_var("METRICS_DELAY", "30");
+        env::set_var("PROMETHEUS_URL", "prometheus_url");
+        env::set_var("DCU_PER_REQUEST_MAINNET", "3");
+        env::set_var("DCU_PER_REQUEST_PREPROD", "3");
+        env::set_var("DCU_PER_REQUEST_PREVIEW", "3");
+        env::set_var("DCU_PER_REQUEST_SANCHONET", "3");
+
+        let network = Network::Preprod;
+        let key = "fake_key";
+
+        let (hostname, hostname_key) = build_hostname(&network, &key, &None);
+        assert_eq!(hostname, String::from("preprod-v2.kupo-m1.demeter.run"));
+        assert_eq!(
+            hostname_key,
+            String::from("fake_key.preprod-v2.kupo-m1.demeter.run")
+        );
+
+        let (hostname, hostname_key) = build_hostname(&network, &key, &Some("3".to_owned()));
+        assert_eq!(hostname, String::from("preprod-v3.kupo-m1.demeter.run"));
+        assert_eq!(
+            hostname_key,
+            String::from("fake_key.preprod-v3.kupo-m1.demeter.run")
+        );
+    }
 }

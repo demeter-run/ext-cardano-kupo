@@ -22,13 +22,15 @@ pub struct Config {
     pub dcu_per_request_preprod: f64,
     pub dcu_per_request_preview: f64,
     pub dcu_per_request_sanchonet: f64,
+
+    pub default_kupo_version: String,
 }
 
 impl Config {
     pub fn from_env() -> Self {
         Self {
             dns_zone: env::var("DNS_ZONE").unwrap_or("demeter.run".into()),
-            ingress_class: env::var("INGRESS_CLASS").unwrap_or("kupo-v1".into()),
+            ingress_class: env::var("INGRESS_CLASS").unwrap_or("kupo-m1".into()),
             api_key_salt: env::var("API_KEY_SALT").unwrap_or("kupo-salt".into()),
 
             metrics_delay: Duration::from_secs(
@@ -54,6 +56,8 @@ impl Config {
                 .expect("DCU_PER_REQUEST_SANCHONET must be set")
                 .parse::<f64>()
                 .expect("DCU_PER_REQUEST_SANCHONET must be a number"),
+
+            default_kupo_version: env::var("DEFAULT_KUPO_VERSION").unwrap_or("2".into()),
         }
     }
 }

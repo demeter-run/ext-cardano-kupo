@@ -1,5 +1,6 @@
 use futures::StreamExt;
 use kube::{
+    core::object::HasSpec,
     runtime::{controller::Action, watcher::Config as WatcherConfig, Controller},
     Api, Client, CustomResource, CustomResourceExt, ResourceExt,
 };
@@ -49,6 +50,7 @@ pub struct KupoPortSpec {
     pub prune_utxo: bool,
     // throughput should be 0, 1, 2
     pub throughput_tier: String,
+    pub kupo_version: Option<String>,
 }
 
 #[derive(Deserialize, Serialize, Clone, Default, Debug, JsonSchema)]
@@ -62,7 +64,7 @@ pub struct KupoPortStatus {
 async fn reconcile(crd: Arc<KupoPort>, ctx: Arc<Context>) -> Result<Action> {
     let key = handle_auth(&ctx.client, &crd).await?;
 
-    let (hostname, hostname_key) = build_hostname(&crd.spec.network, &key);
+    let (hostname, hostname_key) = build_hostname(&crd.spec.network, &key, &crd.spec.kupo_version);
 
     let status = KupoPortStatus {
         endpoint_url: format!("https://{hostname}",),

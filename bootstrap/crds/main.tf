@@ -58,6 +58,10 @@ resource "kubernetes_manifest" "customresourcedefinition_kupoports_demeter_run" 
               "properties" = {
                 "spec" = {
                   "properties" = {
+                    "kupoVersion" = {
+                      "nullable" = true
+                      "type" = "string"
+                    }
                     "network" = {
                       "enum" = [
                         "mainnet",
@@ -92,6 +96,7 @@ resource "kubernetes_manifest" "customresourcedefinition_kupoports_demeter_run" 
                       "type" = "string"
                     }
                     "authenticatedEndpointUrl" = {
+                      "nullable" = true
                       "type" = "string"
                     }
                     "endpointUrl" = {
@@ -100,7 +105,6 @@ resource "kubernetes_manifest" "customresourcedefinition_kupoports_demeter_run" 
                   }
                   "required" = [
                     "authToken",
-                    "authenticatedEndpointUrl",
                     "endpointUrl",
                   ]
                   "type" = "object"
