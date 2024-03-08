@@ -39,6 +39,9 @@ spec:
         properties:
           spec:
             properties:
+              kupoVersion:
+                nullable: true
+                type: string
               network:
                 enum:
                 - mainnet
@@ -64,12 +67,12 @@ spec:
               authToken:
                 type: string
               authenticatedEndpointUrl:
+                nullable: true
                 type: string
               endpointUrl:
                 type: string
             required:
             - authToken
-            - authenticatedEndpointUrl
             - endpointUrl
             type: object
         required:

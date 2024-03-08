@@ -10,6 +10,7 @@ metadata:
   namespace: prj-mainnet-test
 spec:
   operatorVersion: "1"
+  kupoVersion: "v1"
   network: mainnet
   pruneUtxo: false
   throughputTier: "0"

@@ -26,8 +26,6 @@ impl Error {
     }
 }
 
-pub type Result<T, E = Error> = std::result::Result<T, E>;
-
 impl From<serde_json::Error> for Error {
     fn from(value: serde_json::Error) -> Self {
         Error::DeserializeError(value)
@@ -97,17 +95,19 @@ impl TryFrom<&str> for Network {
     }
 }
 
+pub use k8s_openapi;
+pub use kube;
+
+pub type Result<T, E = Error> = std::result::Result<T, E>;
+
 pub mod controller;
 pub use crate::controller::*;
 
 pub mod metrics;
 pub use metrics::*;
 
-mod helpers;
-pub use helpers::*;
-
-mod handlers;
-pub use handlers::*;
-
 mod config;
 pub use config::*;
+
+mod utils;
+pub use utils::*;
