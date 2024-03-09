@@ -256,7 +256,7 @@ spec:
             - name: KUPO_PORT
               value: "80"
             - name: KUPO_DNS
-              value: "prj-mainnet-test"
+              value: "prj-mainnet-test.svc.cluster.local"
             - name: SSL_CRT_PATH
               value: "/certs/localhost.crt"
             - name: SSL_KEY_PATH
@@ -388,7 +388,7 @@ spec:
   type: ClusterIP
   ports:
     - port: 80
-      targetPort: 3000
+      targetPort: 80
       protocol: TCP
 ---
 # Kupo Port 1
