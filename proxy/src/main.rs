@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Display, sync::Arc};
+use std::{collections::HashMap, fmt::Display, sync::Arc, time::Duration};
 
 use auth::AuthBackgroundService;
 use config::Config;
@@ -9,7 +9,7 @@ use pingora::{
 };
 use pingora_limits::rate::Rate;
 use proxy::KupoProxy;
-use serde::Deserialize;
+use serde::{Deserialize, Deserializer};
 use tiers::TierBackgroundService;
 use tokio::sync::{Mutex, RwLock};
 use tracing::Level;
@@ -115,5 +115,13 @@ impl Display for Consumer {
 #[derive(Debug, Clone, Deserialize)]
 pub struct Tier {
     name: String,
-    req_per_minute: isize,
+    rate_limit: isize,
+    #[serde(deserialize_with = "deserialize_duration")]
+    rate_interval: Duration,
+}
+
+pub fn deserialize_duration<'de, D: Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Duration, D::Error> {
+    Ok(Duration::from_secs(Deserialize::deserialize(deserializer)?))
 }

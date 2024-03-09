@@ -8,7 +8,6 @@ use pingora::{
 use pingora_limits::rate::Rate;
 use regex::Regex;
 use std::sync::Arc;
-use std::time::Duration;
 
 use crate::config::Config;
 use crate::{Consumer, State};
@@ -33,16 +32,6 @@ impl KupoProxy {
     }
 
     async fn limiter(&self, consumer: &Consumer) -> Result<bool> {
-        let mut rate_limiter_map = self.state.limiter.lock().await;
-        let rate_limiter = match rate_limiter_map.get(&consumer.key) {
-            None => {
-                let limiter = Rate::new(Duration::from_secs(1));
-                rate_limiter_map.insert(consumer.key.clone(), limiter);
-                rate_limiter_map.get(&consumer.key).unwrap()
-            }
-            Some(limiter) => limiter,
-        };
-
         let tiers = self.state.tiers.read().await.clone();
         let tier = tiers.get(&consumer.tier);
 
@@ -50,7 +39,19 @@ impl KupoProxy {
             return Ok(true);
         }
 
-        if rate_limiter.observe(&consumer.key, 1) > tier.unwrap().req_per_minute {
+        let tier = tier.unwrap();
+
+        let mut rate_limiter_map = self.state.limiter.lock().await;
+        let rate_limiter = match rate_limiter_map.get(&consumer.key) {
+            None => {
+                let limiter = Rate::new(tier.rate_interval);
+                rate_limiter_map.insert(consumer.key.clone(), limiter);
+                rate_limiter_map.get(&consumer.key).unwrap()
+            }
+            Some(limiter) => limiter,
+        };
+
+        if rate_limiter.observe(&consumer.key, 1) > tier.rate_limit {
             return Ok(true);
         }
 
