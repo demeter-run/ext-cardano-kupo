@@ -1936,6 +1936,7 @@ dependencies = [
  "operator",
  "pingora",
  "pingora-limits",
+ "prometheus",
  "regex",
  "serde",
  "serde_json",

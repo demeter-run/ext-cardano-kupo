@@ -8,6 +8,7 @@ use pingora::{
     services::background::background_service,
 };
 use pingora_limits::rate::Rate;
+use prometheus::{opts, register_int_counter_vec};
 use proxy::KupoProxy;
 use serde::{Deserialize, Deserializer};
 use tiers::TierBackgroundService;
@@ -68,20 +69,9 @@ pub struct State {
     consumers: RwLock<HashMap<String, Consumer>>,
     tiers: RwLock<HashMap<String, Tier>>,
     limiter: Mutex<HashMap<String, Rate>>,
+    metrics: Metrics,
 }
 impl State {
-    pub fn try_new() -> Self {
-        let consumers = Default::default();
-        let tiers = Default::default();
-        let limiter = Default::default();
-
-        Self {
-            consumers,
-            tiers,
-            limiter,
-        }
-    }
-
     pub async fn get_consumer(&self, network: &str, version: &str, key: &str) -> Option<Consumer> {
         let consumers = self.consumers.read().await.clone();
         let hash_key = format!("{}.{}.{}", network, version, key);
@@ -119,9 +109,43 @@ pub struct Tier {
     #[serde(deserialize_with = "deserialize_duration")]
     rate_interval: Duration,
 }
-
 pub fn deserialize_duration<'de, D: Deserializer<'de>>(
     deserializer: D,
 ) -> Result<Duration, D::Error> {
     Ok(Duration::from_secs(Deserialize::deserialize(deserializer)?))
+}
+
+#[derive(Debug, Clone)]
+pub struct Metrics {
+    http_total_request: prometheus::IntCounterVec,
+}
+impl Metrics {
+    pub fn new() -> Self {
+        let http_total_request = register_int_counter_vec!(
+            opts!("kupo_proxy_http_total_request", "Total http request",),
+            &["consumer", "namespace", "instance", "status_code",]
+        )
+        .unwrap();
+
+        Self { http_total_request }
+    }
+
+    pub fn inc_http_total_request(
+        &self,
+        consumer: &Consumer,
+        namespace: &str,
+        instance: &str,
+        status: &u16,
+    ) {
+        let consumer = &consumer.to_string();
+
+        self.http_total_request
+            .with_label_values(&[consumer, namespace, instance, &status.to_string()])
+            .inc()
+    }
+}
+impl Default for Metrics {
+    fn default() -> Self {
+        Self::new()
+    }
 }

@@ -8,6 +8,7 @@ use pingora::{
 use pingora_limits::rate::Rate;
 use regex::Regex;
 use std::sync::Arc;
+use tracing::info;
 
 use crate::config::Config;
 use crate::{Consumer, State};
@@ -62,6 +63,7 @@ impl KupoProxy {
 #[derive(Debug, Default)]
 pub struct Context {
     instance: String,
+    consumer: Consumer,
 }
 
 #[async_trait]
@@ -98,19 +100,21 @@ impl ProxyHttp for KupoProxy {
         if consumer.is_none() {
             return Err(pingora::Error::new(pingora::ErrorType::HTTPStatus(401)));
         }
+        let consumer = consumer.unwrap();
 
         let instance = format!(
             "kupo-{network}-pruned.{}:{}",
             self.config.kupo_dns, self.config.kupo_port
         );
-        *ctx = Context { instance };
 
-        if self.limiter(&consumer.unwrap()).await? {
+        if self.limiter(&consumer).await? {
             let header = ResponseHeader::build(429, None).unwrap();
             session.set_keepalive(None);
             session.write_response_header(Box::new(header)).await?;
             return Ok(true);
         }
+
+        *ctx = Context { instance, consumer };
 
         Ok(false)
     }
@@ -122,5 +126,28 @@ impl ProxyHttp for KupoProxy {
     ) -> Result<Box<HttpPeer>> {
         let http_peer = HttpPeer::new(&ctx.instance, false, String::default());
         Ok(Box::new(http_peer))
+    }
+
+    async fn logging(
+        &self,
+        session: &mut Session,
+        _e: Option<&pingora::Error>,
+        ctx: &mut Self::CTX,
+    ) {
+        let response_code = session
+            .response_written()
+            .map_or(0, |resp| resp.status.as_u16());
+
+        info!(
+            "{} response code: {response_code}",
+            self.request_summary(session, ctx)
+        );
+
+        self.state.metrics.inc_http_total_request(
+            &ctx.consumer,
+            &self.config.proxy_namespace,
+            &ctx.instance,
+            &response_code,
+        );
     }
 }
