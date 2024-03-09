@@ -88,7 +88,7 @@ impl BackgroundService for TierBackgroundService {
             if rx.recv().await.is_some() {
                 if let Err(err) = self.update_tiers().await {
                     error!(error = err.to_string(), "error to update tiers");
-                    return;
+                    continue;
                 }
 
                 info!("tiers modified");
