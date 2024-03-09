@@ -11,7 +11,7 @@ use std::sync::Arc;
 use tracing::info;
 
 use crate::config::Config;
-use crate::{Consumer, State};
+use crate::{Consumer, State, Tier};
 
 static DMTR_API_KEY: &str = "dmtr-api-key";
 
@@ -32,26 +32,35 @@ impl KupoProxy {
         }
     }
 
+    async fn has_limiter(&self, consumer: &Consumer) -> bool {
+        let rate_limiter_map = self.state.limiter.read().await;
+        rate_limiter_map.get(&consumer.key).is_some()
+    }
+
+    async fn add_limiter(&self, consumer: &Consumer, tier: &Tier) {
+        let limiter = Rate::new(tier.rate_interval);
+
+        self.state
+            .limiter
+            .write()
+            .await
+            .insert(consumer.key.clone(), limiter);
+    }
+
     async fn limiter(&self, consumer: &Consumer) -> Result<bool> {
         let tiers = self.state.tiers.read().await.clone();
         let tier = tiers.get(&consumer.tier);
-
         if tier.is_none() {
             return Ok(true);
         }
-
         let tier = tier.unwrap();
 
-        let mut rate_limiter_map = self.state.limiter.lock().await;
-        let rate_limiter = match rate_limiter_map.get(&consumer.key) {
-            None => {
-                let limiter = Rate::new(tier.rate_interval);
-                rate_limiter_map.insert(consumer.key.clone(), limiter);
-                rate_limiter_map.get(&consumer.key).unwrap()
-            }
-            Some(limiter) => limiter,
-        };
+        if !self.has_limiter(consumer).await {
+            self.add_limiter(consumer, tier).await;
+        }
 
+        let rate_limiter_map = self.state.limiter.read().await;
+        let rate_limiter = rate_limiter_map.get(&consumer.key).unwrap();
         if rate_limiter.observe(&consumer.key, 1) > tier.rate_limit {
             return Ok(true);
         }

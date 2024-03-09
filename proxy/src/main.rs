@@ -1,5 +1,3 @@
-use std::{collections::HashMap, fmt::Display, sync::Arc, time::Duration};
-
 use auth::AuthBackgroundService;
 use config::Config;
 use dotenv::dotenv;
@@ -11,8 +9,9 @@ use pingora_limits::rate::Rate;
 use prometheus::{opts, register_int_counter_vec};
 use proxy::KupoProxy;
 use serde::{Deserialize, Deserializer};
+use std::{collections::HashMap, fmt::Display, sync::Arc, time::Duration};
 use tiers::TierBackgroundService;
-use tokio::sync::{Mutex, RwLock};
+use tokio::sync::RwLock;
 use tracing::Level;
 
 mod auth;
@@ -68,7 +67,7 @@ fn main() {
 pub struct State {
     consumers: RwLock<HashMap<String, Consumer>>,
     tiers: RwLock<HashMap<String, Tier>>,
-    limiter: Mutex<HashMap<String, Rate>>,
+    limiter: RwLock<HashMap<String, Rate>>,
     metrics: Metrics,
 }
 impl State {

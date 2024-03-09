@@ -2,3 +2,4 @@
 .env
 cert
 env-crd.yaml
+tiers.toml
