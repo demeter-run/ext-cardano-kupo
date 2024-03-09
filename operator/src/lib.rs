@@ -18,6 +18,9 @@ pub enum Error {
 
     #[error("Http Request error: {0}")]
     HttpError(String),
+
+    #[error("Config Error: {0}")]
+    ConfigError(String),
 }
 
 impl Error {

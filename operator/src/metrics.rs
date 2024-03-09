@@ -10,7 +10,7 @@ use std::{net::SocketAddr, str::FromStr, sync::Arc};
 use tokio::net::TcpListener;
 use tracing::{error, info, instrument};
 
-use crate::{get_config, Error, KupoPort, Network, State};
+use crate::{get_config, Error, KupoPort, State};
 
 #[derive(Clone)]
 pub struct Metrics {
@@ -74,8 +74,7 @@ impl Metrics {
             .inc()
     }
 
-    pub fn count_dcu_consumed(&self, ns: &str, network: Network, dcu: f64) {
-        let project = ns.split_once("prj-").unwrap().1;
+    pub fn count_dcu_consumed(&self, project: &str, network: &str, dcu: f64) {
         let service = format!("{}-{}", KupoPort::kind(&()), network);
         let service_type = format!("{}.{}", KupoPort::plural(&()), KupoPort::group(&()));
         let tenancy = "proxy";
@@ -95,7 +94,8 @@ pub fn run_metrics_collector(state: Arc<State>) {
 
         let config = get_config();
         let client = reqwest::Client::builder().build().unwrap();
-        let regex = Regex::new(r"(.+)\.(.+)-.+").unwrap();
+        let project_regex = Regex::new(r"prj-(.+)\..+").unwrap();
+        let network_regex = Regex::new(r"kupo-([\w]+)-.+").unwrap();
         let mut last_execution = Utc::now();
 
         loop {
@@ -107,9 +107,9 @@ pub fn run_metrics_collector(state: Arc<State>) {
             last_execution = end;
 
             let query = format!(
-                    "sum by (consumer) (increase(kong_http_requests_total{{service='kupo-v1-ingress-kong-proxy'}}[{start}s] @ {}))",
-                    end.timestamp_millis() / 1000
-                );
+                "sum by (consumer, exported_instance) (increase(kupo_proxy_http_total_request[{start}s] @ {}))",
+                end.timestamp_millis() / 1000
+            );
 
             let result = client
                 .get(format!("{}/query?query={query}", config.prometheus_url))
@@ -137,32 +137,43 @@ pub fn run_metrics_collector(state: Arc<State>) {
 
             let response = response.json::<PrometheusResponse>().await.unwrap();
             for result in response.data.result {
-                if let Some(consumer) = result.metric.consumer {
-                    let captures = regex.captures(&consumer);
-
-                    if captures.is_none() {
-                        continue;
-                    }
-
-                    let captures = captures.unwrap();
-
-                    let namespace = captures.get(1).unwrap().as_str();
-                    let network: Network = captures.get(2).unwrap().as_str().try_into().unwrap();
-
-                    if result.value == 0.0 {
-                        continue;
-                    }
-
-                    let dcu_per_request = match network {
-                        Network::Mainnet => config.dcu_per_request_mainnet,
-                        Network::Preprod => config.dcu_per_request_preprod,
-                        Network::Preview => config.dcu_per_request_preview,
-                        Network::Sanchonet => config.dcu_per_request_sanchonet,
-                    };
-
-                    let dcu = result.value * dcu_per_request;
-                    state.metrics.count_dcu_consumed(namespace, network, dcu);
+                if result.value == 0.0
+                    || result.metric.consumer.is_none()
+                    || result.metric.exported_instance.is_none()
+                {
+                    continue;
                 }
+
+                let consumer = result.metric.consumer.unwrap();
+                let project_captures = project_regex.captures(&consumer);
+                if project_captures.is_none() {
+                    continue;
+                }
+                let project_captures = project_captures.unwrap();
+                let project = project_captures.get(1).unwrap().as_str();
+
+                let instance = result.metric.exported_instance.unwrap();
+                let network_captures = network_regex.captures(&instance);
+                if network_captures.is_none() {
+                    continue;
+                }
+                let network_captures = network_captures.unwrap();
+                let network = network_captures.get(1).unwrap().as_str();
+
+                let dcu_per_frame = config.dcu_per_frame.get(network);
+                if dcu_per_frame.is_none() {
+                    let error = Error::ConfigError(format!(
+                        "dcu_per_frame not configured to {} network",
+                        network
+                    ));
+                    error!(error = error.to_string());
+                    state.metrics.metrics_failure(&error);
+                    continue;
+                }
+                let dcu_per_frame = dcu_per_frame.unwrap();
+
+                let dcu = result.value * dcu_per_frame;
+                state.metrics.count_dcu_consumed(project, network, dcu);
             }
         }
     });
@@ -232,25 +243,26 @@ async fn api_get_metrics(
     Ok(res)
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 struct PrometheusDataResultMetric {
     consumer: Option<String>,
+    exported_instance: Option<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 struct PrometheusDataResult {
     metric: PrometheusDataResultMetric,
     #[serde(deserialize_with = "deserialize_value")]
     value: f64,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct PrometheusData {
     result: Vec<PrometheusDataResult>,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 struct PrometheusResponse {
     data: PrometheusData,
 }
