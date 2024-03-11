@@ -12,11 +12,8 @@ pub fn get_config() -> &'static Config {
 #[derive(Debug, Clone)]
 pub struct Config {
     pub dns_zone: String,
-
-    pub ingress_class: String,
     pub extension_subdomain: String,
     pub api_key_salt: String,
-
     pub metrics_delay: Duration,
     pub prometheus_url: String,
     pub dcu_per_frame: HashMap<String, f64>,
@@ -27,10 +24,8 @@ impl Config {
     pub fn from_env() -> Self {
         Self {
             dns_zone: env::var("DNS_ZONE").unwrap_or("demeter.run".into()),
-            ingress_class: env::var("INGRESS_CLASS").unwrap_or("kupo-v1".into()),
             extension_subdomain: env::var("EXTENSION_SUBDOMAIN").unwrap_or("kupo-m1".into()),
             api_key_salt: env::var("API_KEY_SALT").unwrap_or("kupo-salt".into()),
-
             metrics_delay: Duration::from_secs(
                 std::env::var("METRICS_DELAY")
                     .expect("METRICS_DELAY must be set")
