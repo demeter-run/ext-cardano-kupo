@@ -8,6 +8,7 @@ use pingora::{
 use pingora_limits::rate::Rate;
 use prometheus::{opts, register_int_counter_vec};
 use proxy::KupoProxy;
+use regex::Regex;
 use serde::{Deserialize, Deserializer};
 use std::{collections::HashMap, fmt::Display, sync::Arc, time::Duration};
 use tiers::TierBackgroundService;
@@ -67,7 +68,7 @@ fn main() {
 pub struct State {
     consumers: RwLock<HashMap<String, Consumer>>,
     tiers: RwLock<HashMap<String, Tier>>,
-    limiter: RwLock<HashMap<String, Rate>>,
+    limiter: RwLock<HashMap<String, Vec<(TierRate, Rate)>>>,
     metrics: Metrics,
 }
 impl State {
@@ -104,14 +105,35 @@ impl Display for Consumer {
 #[derive(Debug, Clone, Deserialize)]
 pub struct Tier {
     name: String,
-    rate_limit: isize,
-    #[serde(deserialize_with = "deserialize_duration")]
-    rate_interval: Duration,
+    rates: Vec<TierRate>,
 }
+#[derive(Debug, Clone, Deserialize)]
+pub struct TierRate {
+    limit: isize,
+    #[serde(deserialize_with = "deserialize_duration")]
+    interval: Duration,
+}
+
 pub fn deserialize_duration<'de, D: Deserializer<'de>>(
     deserializer: D,
 ) -> Result<Duration, D::Error> {
-    Ok(Duration::from_secs(Deserialize::deserialize(deserializer)?))
+    let value: String = Deserialize::deserialize(deserializer)?;
+    let regex = Regex::new(r"([\d]+)([\w])").unwrap();
+    let captures = regex
+        .captures(&value)
+        .expect("Invalid tier interval format");
+    let number = captures.get(1).unwrap().as_str().parse::<u64>().unwrap();
+    let symbol = captures.get(2).unwrap().as_str();
+
+    match symbol {
+        "s" => Ok(Duration::from_secs(number)),
+        "m" => Ok(Duration::from_secs(number * 60)),
+        "h" => Ok(Duration::from_secs(number * 60 * 60)),
+        "d" => Ok(Duration::from_secs(number * 60 * 60 * 24)),
+        _ => Err(<D::Error as serde::de::Error>::custom(
+            "Invalid symbol tier interval",
+        )),
+    }
 }
 
 #[derive(Debug, Clone)]

@@ -21,6 +21,7 @@ impl TierBackgroundService {
 
     async fn update_tiers(&self) -> Result<(), Box<dyn Error>> {
         let contents = fs::read_to_string(&self.config.proxy_tiers_path)?;
+
         let value: Value = toml::from_str(&contents)?;
         let tiers_value: Option<&Value> = value.get("tiers");
         if tiers_value.is_none() {
@@ -28,7 +29,7 @@ impl TierBackgroundService {
             return Ok(());
         }
 
-        let tiers = serde_json::from_value::<Vec<Tier>>(tiers_value.unwrap().to_owned()).unwrap();
+        let tiers = serde_json::from_value::<Vec<Tier>>(tiers_value.unwrap().to_owned())?;
 
         *self.state.tiers.write().await = tiers
             .into_iter()

@@ -38,13 +38,17 @@ impl KupoProxy {
     }
 
     async fn add_limiter(&self, consumer: &Consumer, tier: &Tier) {
-        let limiter = Rate::new(tier.rate_interval);
+        let rates = tier
+            .rates
+            .iter()
+            .map(|r| (r.clone(), Rate::new(r.interval)))
+            .collect();
 
         self.state
             .limiter
             .write()
             .await
-            .insert(consumer.key.clone(), limiter);
+            .insert(consumer.key.clone(), rates);
     }
 
     async fn limiter(&self, consumer: &Consumer) -> Result<bool> {
@@ -60,8 +64,12 @@ impl KupoProxy {
         }
 
         let rate_limiter_map = self.state.limiter.read().await;
-        let rate_limiter = rate_limiter_map.get(&consumer.key).unwrap();
-        if rate_limiter.observe(&consumer.key, 1) > tier.rate_limit {
+        let rates = rate_limiter_map.get(&consumer.key).unwrap();
+
+        if rates
+            .iter()
+            .any(|(t, r)| r.observe(&consumer.key, 1) > t.limit)
+        {
             return Ok(true);
         }
 
