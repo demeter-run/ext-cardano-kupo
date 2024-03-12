@@ -201,24 +201,13 @@ data:
   tiers.toml: |
     [[tiers]]
     name = "0"
-    [[tiers.rates]]
-    interval = "1s"
-    limit = 1
+    second = 1
+    hour = 1
 
     [[tiers]]
     name = "1"
-    [[tiers.rates]]
-    interval = "1s"
-    limit = 1
-    [[tiers.rates]]
-    interval = "1m"
-    limit = 10
-    [[tiers.rates]]
-    interval = "1h"
-    limit = 20
-    [[tiers.rates]]
-    interval = "1d"
-    limit = 30
+    second = 10
+    hour = 20
 kind: ConfigMap
 metadata:
   name: proxy-config
