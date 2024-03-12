@@ -8,8 +8,7 @@ use pingora::{
 use pingora_limits::rate::Rate;
 use prometheus::{opts, register_int_counter_vec};
 use proxy::KupoProxy;
-use regex::Regex;
-use serde::{Deserialize, Deserializer};
+use serde::{de::Visitor, Deserialize, Deserializer};
 use std::{collections::HashMap, fmt::Display, sync::Arc, time::Duration};
 use tiers::TierBackgroundService;
 use tokio::sync::RwLock;
@@ -102,37 +101,74 @@ impl Display for Consumer {
     }
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct Tier {
     name: String,
     rates: Vec<TierRate>,
 }
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct TierRate {
     limit: isize,
-    #[serde(deserialize_with = "deserialize_duration")]
     interval: Duration,
 }
 
-pub fn deserialize_duration<'de, D: Deserializer<'de>>(
-    deserializer: D,
-) -> Result<Duration, D::Error> {
-    let value: String = Deserialize::deserialize(deserializer)?;
-    let regex = Regex::new(r"([\d]+)([\w])").unwrap();
-    let captures = regex
-        .captures(&value)
-        .expect("Invalid tier interval format");
-    let number = captures.get(1).unwrap().as_str().parse::<u64>().unwrap();
-    let symbol = captures.get(2).unwrap().as_str();
+impl<'de> Deserialize<'de> for Tier {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        deserializer.deserialize_map(TierVisitor)
+    }
+}
 
-    match symbol {
-        "s" => Ok(Duration::from_secs(number)),
-        "m" => Ok(Duration::from_secs(number * 60)),
-        "h" => Ok(Duration::from_secs(number * 60 * 60)),
-        "d" => Ok(Duration::from_secs(number * 60 * 60 * 24)),
-        _ => Err(<D::Error as serde::de::Error>::custom(
-            "Invalid symbol tier interval",
-        )),
+struct TierVisitor;
+impl<'de> Visitor<'de> for TierVisitor {
+    type Value = Tier;
+
+    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        formatter.write_str("This Visitor expects to receive i64 seconds")
+    }
+
+    fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+    where
+        A: serde::de::MapAccess<'de>,
+    {
+        let mut rates: Vec<TierRate> = Vec::default();
+
+        let mut name = Default::default();
+
+        while let Some(key) = map.next_key::<String>()? {
+            if key == "name" {
+                name = map.next_value()?;
+                continue;
+            }
+
+            let rate = match key.as_str() {
+                "second" => Ok(TierRate {
+                    limit: map.next_value()?,
+                    interval: Duration::from_secs(1),
+                }),
+                "minute" => Ok(TierRate {
+                    limit: map.next_value()?,
+                    interval: Duration::from_secs(60),
+                }),
+                "hour" => Ok(TierRate {
+                    limit: map.next_value()?,
+                    interval: Duration::from_secs(60 * 60),
+                }),
+                "day" => Ok(TierRate {
+                    limit: map.next_value()?,
+                    interval: Duration::from_secs(60 * 60 * 24),
+                }),
+                _ => Err(serde::de::Error::custom("Invalid symbol tier interval")),
+            }?;
+
+            rates.push(rate);
+        }
+
+        let tier = Tier { name, rates };
+
+        Ok(tier)
     }
 }
 
