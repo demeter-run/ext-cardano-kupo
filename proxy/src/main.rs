@@ -126,7 +126,7 @@ impl<'de> Visitor<'de> for TierVisitor {
     type Value = Tier;
 
     fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-        formatter.write_str("This Visitor expects to receive i64 seconds")
+        formatter.write_str("This Visitor expects to receive a map tier struct")
     }
 
     fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
