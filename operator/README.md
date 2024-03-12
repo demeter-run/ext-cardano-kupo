@@ -14,6 +14,27 @@ This operator will create a key into the CRD to allow Kupo to be accessed extern
 | DCU_PER_FRAME        | preview=5,preprod=5,mainnet=5 |
 | DEFAULT_KUPO_VERSION | 2                             |
 
+## Port CRD
+
+To define a new port, a new k8s manifest needs to be created and set the configuration values.
+
+```yml
+apiVersion: demeter.run/v1alpha1
+kind: KupoPort
+metadata:
+  name: kupo-port-a123ds
+  namespace: prj-mainnet-test
+spec:
+  operatorVersion: "1"
+  kupoVersion: "v1"
+  network: mainnet
+  pruneUtxo: false
+  throughputTier: "0"
+```
+
+`network`: The Kupo network the port will consume.
+`throughputTier`: The tier to limit how many requests the port can do. The tiers will be configured in *tiers.toml* on the proxy.
+
 ## Commands
 
 To generate the CRD will need to execute crdgen
