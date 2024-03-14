@@ -9,8 +9,7 @@ use std::{sync::Arc, time::Duration};
 use tracing::{error, info, instrument};
 
 use crate::{
-    auth::handle_auth, build_hostname, patch_resource_status, Error, Metrics, Network, Result,
-    State,
+    build_api_key, build_hostname, patch_resource_status, Error, Metrics, Network, Result, State,
 };
 
 pub static KUPO_PORT_FINALIZER: &str = "kupoports.demeter.run";
@@ -47,7 +46,6 @@ pub struct KupoPortSpec {
     pub operator_version: String,
     pub network: Network,
     pub prune_utxo: bool,
-    // throughput should be 0, 1, 2
     pub throughput_tier: String,
     pub kupo_version: Option<String>,
 }
@@ -61,7 +59,7 @@ pub struct KupoPortStatus {
 }
 
 async fn reconcile(crd: Arc<KupoPort>, ctx: Arc<Context>) -> Result<Action> {
-    let key = handle_auth(&ctx.client, &crd).await?;
+    let key = build_api_key(&crd).await?;
 
     let (hostname, hostname_key) = build_hostname(&crd.spec.network, &key, &crd.spec.kupo_version);
 
