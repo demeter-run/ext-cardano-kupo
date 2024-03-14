@@ -126,7 +126,6 @@ impl ProxyHttp for KupoProxy {
 
         if self.limiter(&consumer).await? {
             let header = ResponseHeader::build(429, None).unwrap();
-            session.set_keepalive(None);
             session.write_response_header(Box::new(header)).await?;
             return Ok(true);
         }
