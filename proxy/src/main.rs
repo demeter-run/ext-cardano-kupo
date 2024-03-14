@@ -34,7 +34,7 @@ fn main() {
 
     let auth_background_service = background_service(
         "K8S Auth Service",
-        AuthBackgroundService::new(state.clone()),
+        AuthBackgroundService::new(state.clone(), config.clone()),
     );
     server.add_service(auth_background_service);
 

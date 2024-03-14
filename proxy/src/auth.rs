@@ -7,7 +7,7 @@ use operator::{
     kube::{
         api::ListParams,
         runtime::{
-            watcher::{self, Config},
+            watcher::{self, Config as ConfigWatcher},
             WatchStreamExt,
         },
         Api, Client, ResourceExt,
@@ -18,14 +18,15 @@ use pingora::{server::ShutdownWatch, services::background::BackgroundService};
 use tokio::pin;
 use tracing::error;
 
-use crate::{Consumer, State};
+use crate::{config::Config, Consumer, State};
 
 pub struct AuthBackgroundService {
     state: Arc<State>,
+    config: Arc<Config>,
 }
 impl AuthBackgroundService {
-    pub fn new(state: Arc<State>) -> Self {
-        Self { state }
+    pub fn new(state: Arc<State>, config: Arc<Config>) -> Self {
+        Self { state, config }
     }
 
     async fn update_auth(&self, api: Api<KupoPort>) {
@@ -43,7 +44,11 @@ impl AuthBackgroundService {
             if crd.status.is_some() {
                 let network = crd.spec.network.to_string();
                 let tier = crd.spec.throughput_tier.to_string();
-                let version = crd.spec.kupo_version.clone().unwrap();
+                let version = crd
+                    .spec
+                    .kupo_version
+                    .clone()
+                    .unwrap_or(self.config.default_kupo_version.clone());
                 let key = crd.status.as_ref().unwrap().auth_token.clone();
                 let namespace = crd.metadata.namespace.as_ref().unwrap().clone();
                 let port_name = crd.name_any();
@@ -69,7 +74,7 @@ impl BackgroundService for AuthBackgroundService {
         let api = Api::<KupoPort>::all(client.clone());
         self.update_auth(api.clone()).await;
 
-        let stream = watcher::watcher(api.clone(), Config::default()).touched_objects();
+        let stream = watcher::watcher(api.clone(), ConfigWatcher::default()).touched_objects();
         pin!(stream);
 
         loop {

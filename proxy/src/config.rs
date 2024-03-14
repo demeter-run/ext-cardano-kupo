@@ -10,6 +10,7 @@ pub struct Config {
     pub ssl_key_path: String,
     pub kupo_port: u16,
     pub kupo_dns: String,
+    pub default_kupo_version: String,
 }
 impl Config {
     pub fn new() -> Self {
@@ -27,6 +28,7 @@ impl Config {
                 .parse()
                 .expect("KUPO_PORT must a number"),
             kupo_dns: env::var("KUPO_DNS").expect("KUPO_DNS must be set"),
+            default_kupo_version: env::var("DEFAULT_KUPO_VERSION").unwrap_or("2".into()),
         }
     }
 }
