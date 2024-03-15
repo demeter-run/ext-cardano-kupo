@@ -1,5 +1,4 @@
 use async_trait::async_trait;
-use pingora::http::ResponseHeader;
 use pingora::Result;
 use pingora::{
     proxy::{ProxyHttp, Session},
@@ -125,8 +124,7 @@ impl ProxyHttp for KupoProxy {
         );
 
         if self.limiter(&consumer).await? {
-            let header = ResponseHeader::build(429, None).unwrap();
-            session.write_response_header(Box::new(header)).await?;
+            session.respond_error(429).await;
             return Ok(true);
         }
 
