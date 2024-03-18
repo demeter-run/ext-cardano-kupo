@@ -22,7 +22,7 @@ pub struct KupoProxy {
 impl KupoProxy {
     pub fn new(state: Arc<State>, config: Arc<Config>) -> Self {
         let host_regex =
-            Regex::new(r"(dmtr_[\w\d-]+)?\.?([\w]+)-([\w\d]+)\.kupo-([\w\d]+).+").unwrap();
+            Regex::new(r"(dmtr_[\w\d-]+)?\.?([\w]+)-?([\w\d]+)?\.kupo-([\w\d]+).+").unwrap();
 
         Self {
             state,
@@ -102,7 +102,10 @@ impl ProxyHttp for KupoProxy {
 
         let captures = self.host_regex.captures(host).unwrap();
         let network = captures.get(2).unwrap().as_str().to_string();
-        let version = captures.get(3).unwrap().as_str().to_string();
+        let version = captures
+            .get(3)
+            .map(|v| v.as_str().to_string())
+            .unwrap_or(self.config.default_kupo_version.clone());
 
         let mut key = session
             .get_header(DMTR_API_KEY)

@@ -28,7 +28,7 @@ impl Config {
                 .parse()
                 .expect("KUPO_PORT must a number"),
             kupo_dns: env::var("KUPO_DNS").expect("KUPO_DNS must be set"),
-            default_kupo_version: env::var("DEFAULT_KUPO_VERSION").unwrap_or("2".into()),
+            default_kupo_version: env::var("DEFAULT_KUPO_VERSION").unwrap_or("v2".into()),
         }
     }
 }
