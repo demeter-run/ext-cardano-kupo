@@ -104,6 +104,11 @@ impl ProxyHttp for KupoProxy {
         let network = captures.get(2).unwrap().as_str().to_string();
         let version = captures.get(3).unwrap().as_str().to_string();
 
+        ctx.instance = format!(
+            "kupo-{network}-pruned.{}:{}",
+            self.config.kupo_dns, self.config.kupo_port
+        );
+
         let mut key = session
             .get_header(DMTR_API_KEY)
             .map(|v| v.to_str().unwrap())
@@ -114,21 +119,16 @@ impl ProxyHttp for KupoProxy {
 
         let consumer = state.get_consumer(&network, &version, key).await;
         if consumer.is_none() {
-            return Err(pingora::Error::new(pingora::ErrorType::HTTPStatus(401)));
-        }
-        let consumer = consumer.unwrap();
-
-        let instance = format!(
-            "kupo-{network}-pruned.{}:{}",
-            self.config.kupo_dns, self.config.kupo_port
-        );
-
-        if self.limiter(&consumer).await? {
-            session.respond_error(429).await;
+            session.respond_error(401).await;
             return Ok(true);
         }
 
-        *ctx = Context { instance, consumer };
+        ctx.consumer = consumer.unwrap();
+
+        if self.limiter(&ctx.consumer).await? {
+            session.respond_error(429).await;
+            return Ok(true);
+        }
 
         Ok(false)
     }
