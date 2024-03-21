@@ -29,7 +29,7 @@ impl Default for Metrics {
 
         let reconcile_failures = IntCounterVec::new(
             opts!(
-                "kupo_crd_controller_reconciliation_errors_total",
+                "kupo_operator_crd_reconciliation_errors_total",
                 "reconciliation errors",
             ),
             &["instance", "error"],
@@ -38,7 +38,7 @@ impl Default for Metrics {
 
         let metrics_failures = IntCounterVec::new(
             opts!(
-                "kupo_metrics_controller_errors_total",
+                "kupo_operator_metrics_errors_total",
                 "errors to calculation metrics",
             ),
             &["error"],
