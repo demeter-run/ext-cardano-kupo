@@ -92,6 +92,9 @@ data:
       - job_name: proxy
         static_configs:
           - targets: ["proxy:9187"]
+      - job_name: operator
+        static_configs:
+          - targets: ["operator:9187"]
 kind: ConfigMap
 metadata:
   name: prometheus-vol
@@ -333,7 +336,7 @@ spec:
   type: ClusterIP
   ports:
     - name: operator
-      port: 80
+      port: 9187
       targetPort: 9187
       protocol: TCP
 ---
