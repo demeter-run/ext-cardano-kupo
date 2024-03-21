@@ -256,7 +256,7 @@ pub fn run_kong_metrics_collector(state: Arc<State>) {
         info!("collecting kong metrics running");
 
         let config = get_config();
-        let regex = Regex::new(r"(.+)\.(.+)-.+").unwrap();
+        let regex = Regex::new(r"(.+)\.(\w+)-.+").unwrap();
         let mut last_execution = Utc::now();
 
         loop {
