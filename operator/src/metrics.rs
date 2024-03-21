@@ -29,7 +29,7 @@ impl Default for Metrics {
 
         let reconcile_failures = IntCounterVec::new(
             opts!(
-                "crd_controller_reconciliation_errors_total",
+                "kupo_operator_crd_reconciliation_errors_total",
                 "reconciliation errors",
             ),
             &["instance", "error"],
@@ -38,7 +38,7 @@ impl Default for Metrics {
 
         let metrics_failures = IntCounterVec::new(
             opts!(
-                "metrics_controller_errors_total",
+                "kupo_operator_metrics_errors_total",
                 "errors to calculation metrics",
             ),
             &["error"],
@@ -107,7 +107,7 @@ pub fn run_metrics_collector(state: Arc<State>) {
             last_execution = end;
 
             let query = format!(
-                "sum by (consumer, exported_instance) (increase(kupo_proxy_http_total_request[{start}s] @ {}))",
+                "sum by (consumer, exported_instance) (increase(kupo_proxy_http_total_request{{status_code!~\"401|429|503\"}}[{start}s] @ {}))",
                 end.timestamp_millis() / 1000
             );
 
@@ -160,19 +160,19 @@ pub fn run_metrics_collector(state: Arc<State>) {
                 let network_captures = network_captures.unwrap();
                 let network = network_captures.get(1).unwrap().as_str();
 
-                let dcu_per_frame = config.dcu_per_frame.get(network);
-                if dcu_per_frame.is_none() {
+                let dcu_per_request = config.dcu_per_request.get(network);
+                if dcu_per_request.is_none() {
                     let error = Error::ConfigError(format!(
-                        "dcu_per_frame not configured to {} network",
+                        "dcu_per_request not configured to {} network",
                         network
                     ));
                     error!(error = error.to_string());
                     state.metrics.metrics_failure(&error);
                     continue;
                 }
-                let dcu_per_frame = dcu_per_frame.unwrap();
+                let dcu_per_request = dcu_per_request.unwrap();
 
-                let dcu = result.value * dcu_per_frame;
+                let dcu = result.value * dcu_per_request;
                 state.metrics.count_dcu_consumed(project, network, dcu);
             }
         }
