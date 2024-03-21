@@ -13,6 +13,7 @@ async fn main() -> io::Result<()> {
     let state = Arc::new(State::default());
 
     metrics_collector::run_metrics_collector(state.clone());
+    metrics_collector::run_kong_metrics_collector(state.clone());
     metrics_collector::run_metrics_server(state.clone());
 
     controller::run(state.clone()).await;
