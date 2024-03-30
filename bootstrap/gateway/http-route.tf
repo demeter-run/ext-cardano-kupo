@@ -53,6 +53,63 @@ resource "kubernetes_manifest" "http_route" {
   }
 }
 
+// todo - this is hardcoded to v2 of kupo. Need to make this dynamic
+
+resource "kubernetes_manifest" "http_route_m1" {
+  for_each = var.networks
+
+  manifest = {
+    "apiVersion" = "gateway.networking.k8s.io/v1"
+    "kind"       = "HTTPRoute"
+    "metadata" = {
+      "annotations" = {
+        "konghq.com/plugins" = "kupo-key-to-header, kupo-auth, acl-kupo-${each.key}"
+      }
+      "labels" = {
+        "demeter.run/kind"    = "http-route"
+        "demeter.run/tenancy" = "proxy"
+      }
+      "name"      = "kupo-${each.key}-v2"
+      "namespace" = var.namespace
+    }
+    "spec" = {
+      "hostnames" = [
+        "${each.key}-v2.kupo-m1.demeter.run",
+        "*.${each.key}-v2.kupo-m1.demeter.run"
+      ]
+      "parentRefs" = [
+        {
+          "group"     = "gateway.networking.k8s.io"
+          "kind"      = "Gateway"
+          "name"      = "kupo-v1"
+          "namespace" = "ftr-kupo-v1"
+        },
+      ]
+      "rules" = [
+        {
+          "backendRefs" = [
+            {
+              "group"  = ""
+              "kind"   = "Service"
+              "name"   = "kupo-${each.key}-pruned"
+              "port"   = 1442
+              "weight" = 1
+            },
+          ]
+          "matches" = [
+            {
+              "path" = {
+                "type"  = "PathPrefix"
+                "value" = "/"
+              }
+            },
+          ]
+        },
+      ]
+    }
+  }
+}
+
 resource "kubernetes_manifest" "kong_auth_plugin" {
   manifest = {
     "apiVersion" = "configuration.konghq.com/v1"

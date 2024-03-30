@@ -18,6 +18,10 @@ variable "networks" {
   type = set(string)
 }
 
+variable "versions" {
+  type    = list(string)
+  default = ["v2"]
+}
 resource "helm_release" "ingress" {
   name             = "${var.extension_name}-ingress"
   repository       = "https://charts.konghq.com"
@@ -88,12 +92,17 @@ resource "helm_release" "ingress" {
 
   set {
     name  = "env.log_level"
-    value = "info"
+    value = "debug"
   }
 
   set {
     name  = "ingressController.env.feature_gates"
     value = "GatewayAlpha=true"
+  }
+
+  set {
+    name  = "ingressController.env.log_level"
+    value = "debug"
   }
 
   set {
@@ -314,8 +323,99 @@ resource "kubernetes_manifest" "gateway" {
               }
             ]
           }
+        },
+        // m2 routes
+        {
+          "allowedRoutes" : {
+            "namespaces" : {
+              "from" : "All"
+            }
+          }
+          "name" : "proxy-m1"
+          "hostname" : "*.kupo-m1.${var.dns_zone}"
+          "port" : 80
+          "protocol" : "HTTP"
+        },
+        {
+          "allowedRoutes" : {
+            "namespaces" : {
+              "from" : "All"
+            }
+          }
+          "name" : "proxy-m1-ssl"
+          "hostname" : "*.kupo-m1.${var.dns_zone}"
+          "port" : 443
+          "protocol" : "HTTPS"
+          "tls" : {
+            "certificateRefs" : [
+              {
+                "group" : "",
+                "kind" : "Secret",
+                "name" : "kupo-m1-wildcard-tls"
+              }
+            ]
+          }
+        },
+        {
+          "allowedRoutes" : {
+            "namespaces" : {
+              "from" : "All"
+            }
+          }
+          "name" : "authenticated-mainnet-m1"
+          "hostname" : "*.mainnet-v2.kupo-m1.${var.dns_zone}"
+          "port" : 443
+          "protocol" : "HTTPS"
+          "tls" : {
+            "certificateRefs" : [
+              {
+                "group" : "",
+                "kind" : "Secret",
+                "name" : "kupo-m1-wildcard-tls"
+              }
+            ]
+          }
+        },
+        {
+          "allowedRoutes" : {
+            "namespaces" : {
+              "from" : "All"
+            }
+          }
+          "name" : "authenticated-preview-m1"
+          "hostname" : "*.preview-v2.kupo-m1.${var.dns_zone}"
+          "port" : 443
+          "protocol" : "HTTPS"
+          "tls" : {
+            "certificateRefs" : [
+              {
+                "group" : "",
+                "kind" : "Secret",
+                "name" : "kupo-m1-wildcard-tls"
+              }
+            ]
+          }
+        },
+        {
+          "allowedRoutes" : {
+            "namespaces" : {
+              "from" : "All"
+            }
+          }
+          "name" : "authenticated-preprod-m1"
+          "hostname" : "*.preprod-v2.kupo-m1.${var.dns_zone}"
+          "port" : 443
+          "protocol" : "HTTPS"
+          "tls" : {
+            "certificateRefs" : [
+              {
+                "group" : "",
+                "kind" : "Secret",
+                "name" : "kupo-m1-wildcard-tls"
+              }
+            ]
+          }
         }
-
       ]
     }
   }

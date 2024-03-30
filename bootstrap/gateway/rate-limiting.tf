@@ -1,13 +1,17 @@
 locals {
   rate_limiting_tiers = {
     "kupo-tier-0" = {
-      "minute" = 10
+      "minute" = 60
+      "day"    = 25000
+      "policy" = "local"
     },
     "kupo-tier-1" = {
-      "minute" = 100
+      "minute" = 500
+      "policy" = "local"
     },
     "kupo-tier-2" = {
       "minute" = 1000
+      "policy" = "local"
     },
   }
 }
@@ -26,10 +30,7 @@ resource "kubernetes_manifest" "rate_limiting_cluster_plugin" {
         "global" : "false"
       }
     }
-    "config" = {
-      "minute" = each.value.minute
-      "policy" = "local"
-    }
+    "config" = each.value
     "plugin" = "rate-limiting"
   }
 }
