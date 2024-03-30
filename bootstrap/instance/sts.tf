@@ -92,10 +92,25 @@ resource "kubernetes_stateful_set_v1" "kupo" {
 
           readiness_probe {
             exec {
-              command = [
-                "/bin/sh",
-                "-c",
-                "URL='http://localhost:1442/health'; METRICS=$(wget -qO- $URL); NODE_TIP=$(echo \"$METRICS\" | grep 'kupo_most_recent_node_tip' | awk '{print $2}'); CHECKPOINT=$(echo \"$METRICS\" | grep 'kupo_most_recent_checkpoint' | awk '{print $2}'); if [ \"$NODE_TIP\" = \"$CHECKPOINT\" ]; then exit 0; else exit 1; fi"
+              command = ["/bin/sh", "-c", <<-EOF
+                URL='http://localhost:1442/health';
+                METRICS=$(wget -qO- --header="Accept: text/plain" $URL);
+                NODE_TIP=$(echo "$METRICS" | grep 'kupo_most_recent_node_tip' | awk '{print $NF}' | tr -d '"');
+                CHECKPOINT=$(echo "$METRICS" | grep 'kupo_most_recent_checkpoint' | awk '{print $NF}' | tr -d '"');
+                if [ -z "$NODE_TIP" ] || [ -z "$CHECKPOINT" ]; then
+                  echo 'Error: NODE_TIP or CHECKPOINT is null.';
+                  exit 1;
+                fi;
+                if [ "$NODE_TIP" = '0' ] || [ "$CHECKPOINT" = '0' ]; then
+                  echo 'Error: NODE_TIP or CHECKPOINT is 0.';
+                  exit 1;
+                fi;
+                if [ "$NODE_TIP" = "$CHECKPOINT" ]; then
+                  exit 0;
+                else
+                  exit 1;
+                fi
+              EOF
               ]
             }
 
