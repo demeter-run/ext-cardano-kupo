@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use pingora::http::ResponseHeader;
 use pingora::Result;
 use pingora::{
     proxy::{ProxyHttp, Session},
@@ -74,10 +75,19 @@ impl KupoProxy {
 
         Ok(false)
     }
+
+    async fn respond_health(&self, session: &mut Session, ctx: &mut Context) {
+        ctx.is_health_request = true;
+        session.set_keepalive(None);
+        session.write_response_body("OK".into()).await.unwrap();
+        let header = Box::new(ResponseHeader::build(200, None).unwrap());
+        session.write_response_header(header).await.unwrap();
+    }
 }
 
 #[derive(Debug, Default)]
 pub struct Context {
+    is_health_request: bool,
     instance: String,
     consumer: Consumer,
 }
@@ -94,6 +104,13 @@ impl ProxyHttp for KupoProxy {
         Self::CTX: Send + Sync,
     {
         let state = self.state.clone();
+
+        // Check if the request is going to the health endpoint before continuing.
+        let path = session.req_header().uri.path();
+        if path == self.config.health_endpoint {
+            self.respond_health(session, ctx).await;
+            return Ok(true);
+        }
 
         let host = session
             .get_header("host")
@@ -157,11 +174,13 @@ impl ProxyHttp for KupoProxy {
             self.request_summary(session, ctx)
         );
 
-        self.state.metrics.inc_http_total_request(
-            &ctx.consumer,
-            &self.config.proxy_namespace,
-            &ctx.instance,
-            &response_code,
-        );
+        if !ctx.is_health_request {
+            self.state.metrics.inc_http_total_request(
+                &ctx.consumer,
+                &self.config.proxy_namespace,
+                &ctx.instance,
+                &response_code,
+            );
+        }
     }
 }
