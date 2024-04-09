@@ -384,6 +384,50 @@ spec:
       targetPort: 80
       protocol: TCP
 ---
+# Mock dependence
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kupo-vector-test-pruned
+  namespace: prj-mainnet-test
+  labels:
+    app: kupo-vector-test-pruned
+spec:
+  selector:
+    matchLabels:
+      app: kupo-vector-test-pruned
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: kupo-vector-test-pruned
+    spec:
+      containers:
+        - name: kupo-vector-test-pruned
+          image: paulobressan/mock-api:1.0.0
+          ports:
+            - containerPort: 80
+          env:
+            - name: PORT
+              value: "80"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kupo-vector-test-pruned
+  namespace: prj-mainnet-test
+  labels:
+    app: kupo-vector-test-pruned
+spec:
+  selector:
+    app: kupo-vector-test-pruned
+  type: ClusterIP
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP
+---
 # Kupo Port 1
 apiVersion: demeter.run/v1alpha1
 kind: KupoPort
@@ -393,7 +437,7 @@ metadata:
 spec:
   operatorVersion: "1"
   kupoVersion: "v1"
-  network: mainnet
+  network: vector-test 
   pruneUtxo: false
   throughputTier: "0"
 ---
