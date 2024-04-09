@@ -63,12 +63,6 @@ resource "kubernetes_manifest" "customresourcedefinition_kupoports_demeter_run" 
                       "type" = "string"
                     }
                     "network" = {
-                      "enum" = [
-                        "mainnet",
-                        "preprod",
-                        "preview",
-                        "sanchonet",
-                      ]
                       "type" = "string"
                     }
                     "operatorVersion" = {
