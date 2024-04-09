@@ -9,7 +9,7 @@ use kube::{
 };
 use serde_json::json;
 
-use crate::{get_config, Error, KupoPort, Network};
+use crate::{get_config, Error, KupoPort};
 
 pub async fn patch_resource_status(
     client: Client,
@@ -27,11 +27,7 @@ pub async fn patch_resource_status(
     Ok(())
 }
 
-pub fn build_hostname(
-    network: &Network,
-    key: &str,
-    kupo_version: &Option<String>,
-) -> (String, String) {
+pub fn build_hostname(network: &str, key: &str, kupo_version: &Option<String>) -> (String, String) {
     let config = get_config();
     let extension_subdomain = &config.extension_subdomain;
     let dns_zone = &config.dns_zone;
