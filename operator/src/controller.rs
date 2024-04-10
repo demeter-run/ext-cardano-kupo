@@ -9,7 +9,7 @@ use std::{sync::Arc, time::Duration};
 use tracing::{error, info, instrument};
 
 use crate::{
-    build_api_key, build_hostname, patch_resource_status, Error, Metrics, Network, Result, State,
+    build_api_key, build_hostname, patch_resource_status, Error, Metrics, Result, State,
 };
 
 pub static KUPO_PORT_FINALIZER: &str = "kupoports.demeter.run";
@@ -44,7 +44,7 @@ impl Context {
 #[serde(rename_all = "camelCase")]
 pub struct KupoPortSpec {
     pub operator_version: String,
-    pub network: Network,
+    pub network: String,
     pub prune_utxo: bool,
     pub throughput_tier: String,
     pub kupo_version: Option<String>,

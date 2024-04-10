@@ -181,7 +181,7 @@ pub fn run_metrics_collector(state: Arc<State>) {
 
         let config = get_config();
         let project_regex = Regex::new(r"prj-(.+)\..+").unwrap();
-        let network_regex = Regex::new(r"kupo-([\w]+)-.+").unwrap();
+        let network_regex = Regex::new(r"kupo-([\w-]+)-.+").unwrap();
         let mut last_execution = Utc::now();
 
         loop {
