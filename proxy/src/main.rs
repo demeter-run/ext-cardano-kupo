@@ -1,6 +1,7 @@
 use auth::AuthBackgroundService;
 use config::Config;
 use dotenv::dotenv;
+use operator::{kube::ResourceExt, KupoPort};
 use pingora::{
     server::{configuration::Opt, Server},
     services::background::background_service,
@@ -34,7 +35,7 @@ fn main() {
 
     let auth_background_service = background_service(
         "K8S Auth Service",
-        AuthBackgroundService::new(state.clone(), config.clone()),
+        AuthBackgroundService::new(state.clone()),
     );
     server.add_service(auth_background_service);
 
@@ -85,20 +86,35 @@ pub struct Consumer {
     port_name: String,
     tier: String,
     key: String,
-}
-impl Consumer {
-    pub fn new(namespace: String, port_name: String, tier: String, key: String) -> Self {
-        Self {
-            namespace,
-            port_name,
-            key,
-            tier,
-        }
-    }
+    hash_key: String,
 }
 impl Display for Consumer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}.{}", self.namespace, self.port_name)
+    }
+}
+impl From<&KupoPort> for Consumer {
+    fn from(value: &KupoPort) -> Self {
+        let config = Config::default();
+        let network = value.spec.network.to_string();
+        let tier = value.spec.throughput_tier.to_string();
+        let version = value
+            .spec
+            .kupo_version
+            .clone()
+            .unwrap_or(config.default_kupo_version.clone());
+        let key = value.status.as_ref().unwrap().auth_token.clone();
+        let namespace = value.metadata.namespace.as_ref().unwrap().clone();
+        let port_name = value.name_any();
+
+        let hash_key = format!("{}.{}.{}", network, version, key);
+        Self {
+            namespace,
+            port_name,
+            tier,
+            key,
+            hash_key,
+        }
     }
 }
 
