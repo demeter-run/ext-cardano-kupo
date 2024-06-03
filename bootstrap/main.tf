@@ -17,7 +17,7 @@ module "kupo_feature" {
 
 module "kupo_configs" {
   source   = "./configs"
-  for_each = var.networks
+  for_each   = { for network in var.networks : "${network}" => network }
 
   namespace = var.namespace
   network   = each.value
