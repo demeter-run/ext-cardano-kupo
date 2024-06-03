@@ -1,27 +1,24 @@
 resource "kubernetes_deployment_v1" "kupo_proxy" {
   wait_for_rollout = false
-  depends_on = [ kubernetes_manifest.certificate_cluster_wildcard_tls ]
+  depends_on       = [kubernetes_manifest.certificate_cluster_wildcard_tls]
 
   metadata {
-    name      = local.name
+    name      = var.name
     namespace = var.namespace
-    labels = {
-      role = local.role
-    }
+    labels    = local.proxy_labels
   }
+
   spec {
     replicas = var.replicas
+
     selector {
-      match_labels = {
-        role = local.role
-      }
+      match_labels = local.proxy_labels
     }
+
     template {
       metadata {
-        name = local.name
-        labels = {
-          role = local.role
-        }
+        name   = var.name
+        labels = local.proxy_labels
       }
       spec {
         container {
@@ -78,22 +75,22 @@ resource "kubernetes_deployment_v1" "kupo_proxy" {
           }
 
           env {
-            name = "DEFAULT_KUPO_VERSION"
+            name  = "DEFAULT_KUPO_VERSION"
             value = "v2"
           }
 
           env {
-            name = "SSL_CRT_PATH"
+            name  = "SSL_CRT_PATH"
             value = "/certs/tls.crt"
           }
 
           env {
-            name = "SSL_KEY_PATH"
+            name  = "SSL_KEY_PATH"
             value = "/certs/tls.key"
           }
 
           env {
-            name = "PROXY_TIERS_PATH"
+            name  = "PROXY_TIERS_PATH"
             value = "/configs/tiers.toml"
           }
 
