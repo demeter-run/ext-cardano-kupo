@@ -54,7 +54,7 @@ resource "kubernetes_stateful_set_v1" "kupo" {
 
         container {
           name              = "main"
-          image             = "ghcr.io/demeter-run/cardano-kupo::${var.image_tag}"
+          image             = "ghcr.io/demeter-run/cardano-kupo:${var.image_tag}"
           image_pull_policy = "Always"
           args              = local.args
 
