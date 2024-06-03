@@ -1,4 +1,5 @@
 locals {
+  name = var.name
   role = "proxy"
 
   prometheus_port = 9187
