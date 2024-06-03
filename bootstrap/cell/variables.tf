@@ -1,7 +1,3 @@
-locals {
-  pvc_name = coalesce(var.pvc_name, "pvc-${var.salt}")
-}
-
 variable "namespace" {
   type = string
 }
@@ -20,20 +16,13 @@ variable "storage_size" {
   type = string
 }
 
-variable "pvc_name" {
-  type    = string
-  default = null
-}
-
 // Instances
 variable "instances" {
   type = map(object({
-    image_tag       = string
-    network         = string
-    pruned          = bool
-    n2n_endpoint    = string
-    db_volume_claim = string
-    suffix          = string
+    image_tag    = string
+    network      = string
+    pruned       = bool
+    n2n_endpoint = string
     resources = optional(object({
       limits = object({
         cpu    = string

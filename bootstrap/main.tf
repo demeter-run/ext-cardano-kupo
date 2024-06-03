@@ -17,7 +17,7 @@ module "kupo_feature" {
 
 module "kupo_configs" {
   source   = "./configs"
-  for_each   = { for network in var.networks : "${network}" => network }
+  for_each = { for network in var.networks : "${network}" => network }
 
   namespace = var.namespace
   network   = each.value
@@ -72,7 +72,6 @@ module "kupo_cells" {
   // PVC
   volume_name  = each.value.pvc.volume_name
   storage_size = each.value.pvc.storage_size
-  pvc_name     = each.value.pvc.name
 
   // Instances
   instances = each.value.instances

@@ -1,5 +1,8 @@
 // Each cell of the kupo extension containes 1 PVC and an amount of indexers
 // (commonly 3, one per network).
+locals {
+  pvc_name = "db-local-pv-${var.salt}"
+}
 
 module "kupo_pvc" {
   source       = "../pvc"
@@ -18,8 +21,8 @@ module "kupo_instances" {
   network         = each.value.network
   pruned          = each.value.pruned
   n2n_endpoint    = each.value.n2n_endpoint
-  db_volume_claim = each.value.db_volume_claim
-  suffix          = each.value.suffix
+  db_volume_claim = local.pvc_name
+  suffix          = each.value.salt
 
   resources = coalesce(each.value.resources, {
     limits = {

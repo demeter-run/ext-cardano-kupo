@@ -99,15 +99,12 @@ variable "cells" {
     pvc = object({
       volume_name  = string
       storage_size = string
-      name         = optional(string)
     })
     instances = map(object({
-      image_tag       = string
-      network         = string
-      pruned          = bool
-      n2n_endpoint    = string
-      db_volume_claim = string
-      suffix          = string
+      image_tag    = string
+      network      = string
+      pruned       = bool
+      n2n_endpoint = string
       resources = optional(object({
         limits = object({
           cpu    = string
