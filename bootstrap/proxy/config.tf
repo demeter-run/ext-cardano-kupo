@@ -1,5 +1,7 @@
 // numbers here should consider number of proxy replicas
 locals {
+  config_map_name = var.environment != null ? "${var.environment}-proxy-config" : "proxy-config"
+
   tiers = [
     {
       "name" = "0",
@@ -59,7 +61,7 @@ locals {
 resource "kubernetes_config_map" "proxy" {
   metadata {
     namespace = var.namespace
-    name      = "proxy-config"
+    name      = local.config_map_name
   }
 
   data = {
