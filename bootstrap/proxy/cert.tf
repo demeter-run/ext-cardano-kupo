@@ -7,7 +7,7 @@ locals {
 
   # Add the extra URL to the list of generated URLs
   dns_names        = concat(local.by_network, ["*.${var.extension_name}.${var.dns_zone}"])
-  cert_secret_name = "${var.extension_name}-proxy-wildcard-tls"
+  cert_secret_name = var.environment != null ? "${var.extension_name}-${var.environment}-proxy-wildcard-tls" : "${var.extension_name}-proxy-wildcard-tls"
 }
 
 resource "kubernetes_manifest" "certificate_cluster_wildcard_tls" {
