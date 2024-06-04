@@ -87,11 +87,11 @@ resource "kubernetes_deployment_v1" "operator" {
 
           resources {
             limits = {
-              memory = "512Mi"
+              memory = "756Mi"
             }
             requests = {
               cpu    = "50m"
-              memory = "512Mi"
+              memory = "756Mi"
             }
           }
 
