@@ -22,7 +22,7 @@ module "kupo_instances" {
   pruned          = each.value.pruned
   n2n_endpoint    = each.value.n2n_endpoint
   db_volume_claim = local.pvc_name
-  suffix          = var.salt
+  suffix          = coalesce(each.value.suffix, var.salt)
 
   resources = coalesce(each.value.resources, {
     limits = {

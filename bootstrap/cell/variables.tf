@@ -23,6 +23,7 @@ variable "instances" {
     network      = string
     pruned       = bool
     n2n_endpoint = string
+    suffix       = optional(string)
     resources = optional(object({
       limits = object({
         cpu    = string
