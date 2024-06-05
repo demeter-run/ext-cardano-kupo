@@ -164,7 +164,7 @@ impl Metrics {
     pub fn new() -> Self {
         let http_total_request = register_int_counter_vec!(
             opts!("kupo_proxy_http_total_request", "Total http request",),
-            &["consumer", "namespace", "instance", "status_code",]
+            &["consumer", "namespace", "instance", "status_code", "tier"]
         )
         .unwrap();
 
@@ -178,10 +178,14 @@ impl Metrics {
         instance: &str,
         status: &u16,
     ) {
-        let consumer = &consumer.to_string();
-
         self.http_total_request
-            .with_label_values(&[consumer, namespace, instance, &status.to_string()])
+            .with_label_values(&[
+                &consumer.to_string(),
+                namespace,
+                instance,
+                &status.to_string(),
+                &consumer.tier,
+            ])
             .inc()
     }
 }
