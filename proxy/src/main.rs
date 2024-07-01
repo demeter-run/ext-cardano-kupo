@@ -73,10 +73,8 @@ pub struct State {
     metrics: Metrics,
 }
 impl State {
-    pub async fn get_consumer(&self, network: &str, version: &str, key: &str) -> Option<Consumer> {
-        let consumers = self.consumers.read().await.clone();
-        let hash_key = format!("{}.{}.{}", network, version, key);
-        consumers.get(&hash_key).cloned()
+    pub async fn get_consumer(&self, key: &str) -> Option<Consumer> {
+        self.consumers.read().await.get(key).cloned()
     }
 }
 
@@ -86,7 +84,7 @@ pub struct Consumer {
     port_name: String,
     tier: String,
     key: String,
-    hash_key: String,
+    network: String,
 }
 impl Display for Consumer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -95,25 +93,18 @@ impl Display for Consumer {
 }
 impl From<&KupoPort> for Consumer {
     fn from(value: &KupoPort) -> Self {
-        let config = Config::default();
         let network = value.spec.network.to_string();
         let tier = value.spec.throughput_tier.to_string();
-        let version = value
-            .spec
-            .kupo_version
-            .clone()
-            .unwrap_or(config.default_kupo_version.clone());
         let key = value.status.as_ref().unwrap().auth_token.clone();
         let namespace = value.metadata.namespace.as_ref().unwrap().clone();
         let port_name = value.name_any();
 
-        let hash_key = format!("{}.{}.{}", network, version, key);
         Self {
             namespace,
             port_name,
             tier,
             key,
-            hash_key,
+            network,
         }
     }
 }

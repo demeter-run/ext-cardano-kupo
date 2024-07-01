@@ -22,8 +22,7 @@ pub struct KupoProxy {
 }
 impl KupoProxy {
     pub fn new(state: Arc<State>, config: Arc<Config>) -> Self {
-        let host_regex =
-            Regex::new(r"(dmtr_[\w\d-]+)?\.?([\w-]+)-([\w\d]+)\.kupo-([\w\d]+).+").unwrap();
+        let host_regex = Regex::new(r"(dmtr_[\w\d-]+)?\.?.+").unwrap();
 
         Self {
             state,
@@ -112,20 +111,13 @@ impl ProxyHttp for KupoProxy {
             return Ok(true);
         }
 
+        // Extract key from host or header.
         let host = session
             .get_header("host")
             .map(|v| v.to_str().unwrap())
             .unwrap();
 
         let captures = self.host_regex.captures(host).unwrap();
-        let network = captures.get(2).unwrap().as_str().to_string();
-        let version = captures.get(3).unwrap().as_str().to_string();
-
-        ctx.instance = format!(
-            "kupo-{network}-pruned.{}:{}",
-            self.config.kupo_dns, self.config.kupo_port
-        );
-
         let mut key = session
             .get_header(DMTR_API_KEY)
             .map(|v| v.to_str().unwrap())
@@ -134,13 +126,17 @@ impl ProxyHttp for KupoProxy {
             key = m.as_str();
         }
 
-        let consumer = state.get_consumer(&network, &version, key).await;
+        let consumer = state.get_consumer(key).await;
         if consumer.is_none() {
             session.respond_error(401).await;
             return Ok(true);
         }
 
         ctx.consumer = consumer.unwrap();
+        ctx.instance = format!(
+            "kupo-{}-pruned.{}:{}",
+            ctx.consumer.network, self.config.kupo_dns, self.config.kupo_port
+        );
 
         if self.limiter(&ctx.consumer).await? {
             session.respond_error(429).await;

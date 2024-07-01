@@ -43,7 +43,7 @@ impl BackgroundService for AuthBackgroundService {
                         .iter()
                         .map(|crd| {
                             let consumer = Consumer::from(crd);
-                            (consumer.hash_key.clone(), consumer)
+                            (consumer.key.clone(), consumer)
                         })
                         .collect();
                     *self.state.consumers.write().await = consumers;
@@ -59,7 +59,7 @@ impl BackgroundService for AuthBackgroundService {
                             .consumers
                             .write()
                             .await
-                            .insert(consumer.hash_key.clone(), consumer);
+                            .insert(consumer.key.clone(), consumer);
                     }
                     None => {
                         // New ports are created without status. When the status is added, a new
@@ -74,11 +74,7 @@ impl BackgroundService for AuthBackgroundService {
                         crd.name_any()
                     );
                     let consumer = Consumer::from(&crd);
-                    self.state
-                        .consumers
-                        .write()
-                        .await
-                        .remove(&consumer.hash_key);
+                    self.state.consumers.write().await.remove(&consumer.key);
                     self.state.limiter.write().await.remove(&consumer.key);
                 }
                 // Empty response from stream. Should never happen.
