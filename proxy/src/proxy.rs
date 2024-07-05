@@ -133,10 +133,16 @@ impl ProxyHttp for KupoProxy {
         }
 
         ctx.consumer = consumer.unwrap();
-        ctx.instance = format!(
-            "kupo-{}-pruned.{}:{}",
-            ctx.consumer.network, self.config.kupo_dns, self.config.kupo_port
-        );
+        ctx.instance = match ctx.consumer.pruned {
+            true => format!(
+                "kupo-{}-pruned.{}:{}",
+                ctx.consumer.network, self.config.kupo_dns, self.config.kupo_port
+            ),
+            false => format!(
+                "kupo-{}.{}:{}",
+                ctx.consumer.network, self.config.kupo_dns, self.config.kupo_port
+            ),
+        };
 
         if self.limiter(&ctx.consumer).await? {
             session.respond_error(429).await;
