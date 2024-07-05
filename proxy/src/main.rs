@@ -85,6 +85,7 @@ pub struct Consumer {
     tier: String,
     key: String,
     network: String,
+    pruned: bool,
 }
 impl Display for Consumer {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -98,6 +99,7 @@ impl From<&KupoPort> for Consumer {
         let key = value.status.as_ref().unwrap().auth_token.clone();
         let namespace = value.metadata.namespace.as_ref().unwrap().clone();
         let port_name = value.name_any();
+        let pruned = value.spec.prune_utxo;
 
         Self {
             namespace,
@@ -105,6 +107,7 @@ impl From<&KupoPort> for Consumer {
             tier,
             key,
             network,
+            pruned,
         }
     }
 }
