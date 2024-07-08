@@ -13,9 +13,10 @@ locals {
     "--match",
     "*",
     "--since",
-    "origin"
+    "origin",
   ]
-  args = var.pruned ? concat(local.base_args, ["--prune-utxo"]) : local.base_args
+  temp_args = var.pruned ? concat(local.base_args, ["--prune-utxo"]) : local.base_args
+  args = var.defer_indexes ? concat(local.temp_args, ["--defer-db-indexes"]) : local.temp_args
 }
 
 resource "kubernetes_stateful_set_v1" "kupo" {
@@ -73,6 +74,11 @@ resource "kubernetes_stateful_set_v1" "kupo" {
               cpu    = var.resources.requests.cpu
               memory = var.resources.requests.memory
             }
+          }
+
+          env {
+            name  = "GHCRTS"
+            value = "-N8"
           }
 
           volume_mount {

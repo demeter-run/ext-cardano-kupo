@@ -20,6 +20,7 @@ module "kupo_instances" {
   image_tag       = each.value.image_tag
   network         = each.value.network
   pruned          = each.value.pruned
+  defer_indexes   = coalesce(each.value.defer_indexes, false)
   n2n_endpoint    = each.value.n2n_endpoint
   db_volume_claim = local.pvc_name
   suffix          = coalesce(each.value.suffix, var.salt)

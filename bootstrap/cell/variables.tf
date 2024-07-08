@@ -22,6 +22,7 @@ variable "instances" {
     image_tag    = string
     network      = string
     pruned       = bool
+    defer_indexes = optional(bool)
     n2n_endpoint = string
     suffix       = optional(string)
     resources = optional(object({

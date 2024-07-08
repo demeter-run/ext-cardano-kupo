@@ -33,6 +33,16 @@ module "kupo_services" {
   prune     = true
 }
 
+module "kupo_services_non_pruned" {
+  depends_on = [kubernetes_namespace.namespace]
+  for_each   = { for network in var.networks : "${network}" => network }
+  source     = "./service"
+
+  namespace = var.namespace
+  network   = each.value
+  prune     = false
+}
+
 // blue (once we have a green, we can update its name to proxy-blue)
 module "kupo_proxy" {
   depends_on = [kubernetes_namespace.namespace]
