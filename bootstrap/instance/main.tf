@@ -49,3 +49,6 @@ variable "suffix" {
   default = ""
 }
 
+variable "defer_indexes" {
+  default = false
+}
