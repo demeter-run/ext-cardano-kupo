@@ -58,7 +58,10 @@ pub struct KupoPortStatus {
 }
 
 async fn reconcile(crd: Arc<KupoPort>, ctx: Arc<Context>) -> Result<Action> {
-    let key = build_api_key(&crd).await?;
+    let key = match &crd.spec.auth_token {
+        Some(key) => key.clone(),
+        None => build_api_key(&crd).await?,
+    };
 
     let (hostname, hostname_key) = build_hostname(&crd.spec.network, &key, &crd.spec.kupo_version);
 
