@@ -8,9 +8,7 @@ use serde::{Deserialize, Serialize};
 use std::{sync::Arc, time::Duration};
 use tracing::{error, info, instrument};
 
-use crate::{
-    build_api_key, build_hostname, patch_resource_status, Error, Metrics, Result, State,
-};
+use crate::{build_api_key, build_hostname, patch_resource_status, Error, Metrics, Result, State};
 
 pub static KUPO_PORT_FINALIZER: &str = "kupoports.demeter.run";
 
@@ -48,6 +46,7 @@ pub struct KupoPortSpec {
     pub prune_utxo: bool,
     pub throughput_tier: String,
     pub kupo_version: Option<String>,
+    pub auth_token: Option<String>,
 }
 
 #[derive(Deserialize, Serialize, Clone, Default, Debug, JsonSchema)]
