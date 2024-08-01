@@ -1,4 +1,4 @@
-name: Blockfrost instance
+name: Kupo instance
 
 on:
   workflow_dispatch: {}
@@ -15,7 +15,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - context: .
+          - context: ./docker
             file: docker/dockerfile.instance
             endpoint: demeter-run/ext-cardano-kupo-instance
 
