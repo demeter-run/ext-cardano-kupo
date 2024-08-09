@@ -58,6 +58,10 @@ resource "kubernetes_manifest" "customresourcedefinition_kupoports_demeter_run" 
               "properties" = {
                 "spec" = {
                   "properties" = {
+                    "authToken" = {
+                      "nullable" = true
+                      "type" = "string"
+                    }
                     "kupoVersion" = {
                       "nullable" = true
                       "type" = "string"
