@@ -16,15 +16,23 @@ variable "storage_size" {
   type = string
 }
 
+variable "storage_class_name" {
+  type = string
+}
+
+variable "access_mode" {
+  type = string
+}
+
 // Instances
 variable "instances" {
   type = map(object({
-    image_tag    = string
-    network      = string
-    pruned       = bool
+    image_tag     = string
+    network       = string
+    pruned        = bool
     defer_indexes = optional(bool)
-    n2n_endpoint = string
-    suffix       = optional(string)
+    n2n_endpoint  = string
+    suffix        = optional(string)
     resources = optional(object({
       limits = object({
         cpu    = string

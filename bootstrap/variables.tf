@@ -1,10 +1,21 @@
 variable "namespace" {
-  type = string
+  type    = string
+  default = "ftr-kupo-v1"
 }
 
 variable "networks" {
   type    = list(string)
   default = ["mainnet", "preprod", "preview"]
+}
+
+variable "cloud_provider" {
+  type    = string
+  default = "aws"
+}
+
+variable "cluster_issuer" {
+  type    = string
+  default = "letsencrypt"
 }
 
 // Feature
@@ -93,20 +104,27 @@ variable "proxy_resources" {
   }
 }
 
+variable "storage_class" {
+  type    = string
+  default = "nvme"
+}
+
 // Cells
 variable "cells" {
   type = map(object({
     pvc = object({
-      volume_name  = string
-      storage_size = string
+      volume_name        = optional(string)
+      storage_size       = string
+      storage_class_name = string
+      access_mode        = string
     })
     instances = map(object({
-      image_tag    = string
-      network      = string
-      pruned       = bool
+      image_tag     = string
+      network       = string
+      pruned        = bool
       defer_indexes = optional(bool)
-      n2n_endpoint = string
-      suffix       = optional(string)
+      n2n_endpoint  = string
+      suffix        = optional(string)
       resources = optional(object({
         limits = object({
           cpu    = string
