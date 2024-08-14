@@ -28,6 +28,7 @@ impl Context {
     group = "demeter.run",
     version = "v1alpha1",
     shortname = "kpts",
+    category = "demeter-port",
     namespaced
 )]
 #[kube(status = "KupoPortStatus")]
