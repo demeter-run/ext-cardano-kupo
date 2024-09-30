@@ -5,22 +5,25 @@ locals {
 }
 
 module "kupo_pvc" {
-  source       = "../pvc"
-  namespace    = var.namespace
-  volume_name  = var.volume_name
-  storage_size = var.storage_size
-  name         = local.pvc_name
+  source             = "../pvc"
+  namespace          = var.namespace
+  access_mode        = var.access_mode
+  volume_name        = var.volume_name
+  storage_class_name = var.storage_class_name
+  storage_size       = var.storage_size
+  name               = local.pvc_name
 }
 
 module "kupo_instances" {
   source   = "../instance"
   for_each = var.instances
 
-  namespace       = var.namespace
-  image_tag       = each.value.image_tag
-  network         = each.value.network
-  pruned          = each.value.pruned
-  defer_indexes   = coalesce(each.value.defer_indexes, false)
+  namespace     = var.namespace
+  image_tag     = each.value.image_tag
+  network       = each.value.network
+  pruned        = each.value.pruned
+  defer_indexes = coalesce(each.value.defer_indexes, false)
+  # TODO: This should be probably n2c_endpoint
   n2n_endpoint    = each.value.n2n_endpoint
   db_volume_claim = local.pvc_name
   suffix          = coalesce(each.value.suffix, var.salt)

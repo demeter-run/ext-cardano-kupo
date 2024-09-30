@@ -25,7 +25,7 @@ resource "kubernetes_manifest" "http_route" {
           "group"     = "gateway.networking.k8s.io"
           "kind"      = "Gateway"
           "name"      = "kupo-v1"
-          "namespace" = "ftr-kupo-v1"
+          "namespace" = var.namespace
         },
       ]
       "rules" = [
@@ -82,7 +82,7 @@ resource "kubernetes_manifest" "http_route_m1" {
           "group"     = "gateway.networking.k8s.io"
           "kind"      = "Gateway"
           "name"      = "kupo-v1"
-          "namespace" = "ftr-kupo-v1"
+          "namespace" = var.namespace
         },
       ]
       "rules" = [

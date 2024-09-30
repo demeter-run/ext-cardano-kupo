@@ -13,6 +13,7 @@ module "kupo_feature" {
   dns_zone            = var.dns_zone
   api_key_salt        = var.api_key_salt
   per_request_dcus    = var.per_request_dcus
+  namespace           = var.namespace
 }
 
 module "kupo_configs" {
@@ -45,9 +46,10 @@ module "kupo_services_non_pruned" {
 
 // blue (once we have a green, we can update its name to proxy-blue)
 module "kupo_proxy" {
-  depends_on = [kubernetes_namespace.namespace]
-  source     = "./proxy"
-
+  depends_on      = [kubernetes_namespace.namespace]
+  source          = "./proxy"
+  cloud_provider  = var.cloud_provider
+  cluster_issuer  = var.cluster_issuer
   namespace       = var.namespace
   replicas        = var.proxy_blue_replicas
   extension_name  = var.extension_subdomain
@@ -58,9 +60,10 @@ module "kupo_proxy" {
 }
 
 module "kupo_proxy_green" {
-  depends_on = [kubernetes_namespace.namespace]
-  source     = "./proxy"
-
+  depends_on      = [kubernetes_namespace.namespace]
+  source          = "./proxy"
+  cloud_provider  = var.cloud_provider
+  cluster_issuer  = var.cluster_issuer
   namespace       = var.namespace
   replicas        = var.proxy_green_replicas
   extension_name  = var.extension_subdomain
@@ -80,8 +83,10 @@ module "kupo_cells" {
   salt      = each.key
 
   // PVC
-  volume_name  = each.value.pvc.volume_name
-  storage_size = each.value.pvc.storage_size
+  volume_name        = each.value.pvc.volume_name
+  storage_size       = each.value.pvc.storage_size
+  storage_class_name = each.value.pvc.storage_class_name
+  access_mode        = each.value.pvc.access_mode
 
   // Instances
   instances = each.value.instances

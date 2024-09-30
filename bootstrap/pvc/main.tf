@@ -1,17 +1,30 @@
 variable "namespace" {
-  description = "the namespace where the resources will be created"
+  description = "The namespace where the resources will be created."
 }
 
 variable "volume_name" {
-  description = "the name of the volume"
+  description = "The name of the volume. If not specified, the volume will be dynamically provisioned."
+  type        = string
+  default     = null
 }
 
 variable "name" {
-  description = "the name of the pvc"
+  description = "The name of the PersistentVolumeClaim (PVC)."
 }
 
 variable "storage_size" {
-  description = "the size of the volume"
+  description = "The size of the volume."
+}
+
+variable "storage_class_name" {
+  description = "The name of the storage class to use."
+  default     = "nvme"
+}
+
+variable "access_mode" {
+  description = "The access mode for the volume."
+  type        = string
+  default     = "ReadWriteMany"
 }
 
 resource "kubernetes_persistent_volume_claim" "shared_disk" {
@@ -23,13 +36,15 @@ resource "kubernetes_persistent_volume_claim" "shared_disk" {
   }
 
   spec {
-    access_modes = ["ReadWriteMany"]
+    access_modes = [var.access_mode]
+
     resources {
       requests = {
         storage = var.storage_size
       }
     }
-    storage_class_name = "nvme"
-    volume_name        = var.volume_name
+
+    storage_class_name = var.storage_class_name
+    volume_name        = var.volume_name != null ? var.volume_name : null
   }
 }

@@ -1,7 +1,7 @@
 resource "kubernetes_manifest" "customresourcedefinition_kupoports_demeter_run" {
   manifest = {
     "apiVersion" = "apiextensions.k8s.io/v1"
-    "kind" = "CustomResourceDefinition"
+    "kind"       = "CustomResourceDefinition"
     "metadata" = {
       "name" = "kupoports.demeter.run"
     }
@@ -11,7 +11,7 @@ resource "kubernetes_manifest" "customresourcedefinition_kupoports_demeter_run" 
         "categories" = [
           "demeter-port",
         ]
-        "kind" = "KupoPort"
+        "kind"   = "KupoPort"
         "plural" = "kupoports"
         "shortNames" = [
           "kpts",
@@ -24,33 +24,33 @@ resource "kubernetes_manifest" "customresourcedefinition_kupoports_demeter_run" 
           "additionalPrinterColumns" = [
             {
               "jsonPath" = ".spec.network"
-              "name" = "Network"
-              "type" = "string"
+              "name"     = "Network"
+              "type"     = "string"
             },
             {
               "jsonPath" = ".spec.pruneUtxo"
-              "name" = "Pruned"
-              "type" = "boolean"
+              "name"     = "Pruned"
+              "type"     = "boolean"
             },
             {
               "jsonPath" = ".spec.throughputTier"
-              "name" = "Throughput Tier"
-              "type" = "string"
+              "name"     = "Throughput Tier"
+              "type"     = "string"
             },
             {
               "jsonPath" = ".status.endpointUrl"
-              "name" = "Endpoint URL"
-              "type" = "string"
+              "name"     = "Endpoint URL"
+              "type"     = "string"
             },
             {
               "jsonPath" = ".status.authenticatedEndpointUrl"
-              "name" = "Authenticated Endpoint URL"
-              "type" = "string"
+              "name"     = "Authenticated Endpoint URL"
+              "type"     = "string"
             },
             {
               "jsonPath" = ".status.authToken"
-              "name" = "Auth Token"
-              "type" = "string"
+              "name"     = "Auth Token"
+              "type"     = "string"
             },
           ]
           "name" = "v1alpha1"
@@ -62,11 +62,11 @@ resource "kubernetes_manifest" "customresourcedefinition_kupoports_demeter_run" 
                   "properties" = {
                     "authToken" = {
                       "nullable" = true
-                      "type" = "string"
+                      "type"     = "string"
                     }
                     "kupoVersion" = {
                       "nullable" = true
-                      "type" = "string"
+                      "type"     = "string"
                     }
                     "network" = {
                       "type" = "string"
@@ -97,7 +97,7 @@ resource "kubernetes_manifest" "customresourcedefinition_kupoports_demeter_run" 
                     }
                     "authenticatedEndpointUrl" = {
                       "nullable" = true
-                      "type" = "string"
+                      "type"     = "string"
                     }
                     "endpointUrl" = {
                       "type" = "string"
@@ -114,10 +114,10 @@ resource "kubernetes_manifest" "customresourcedefinition_kupoports_demeter_run" 
                 "spec",
               ]
               "title" = "KupoPort"
-              "type" = "object"
+              "type"  = "object"
             }
           }
-          "served" = true
+          "served"  = true
           "storage" = true
           "subresources" = {
             "status" = {}
