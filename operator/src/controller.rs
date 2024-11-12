@@ -42,7 +42,7 @@ impl Context {
     "#)]
 #[serde(rename_all = "camelCase")]
 pub struct KupoPortSpec {
-    pub operator_version: String,
+    pub operator_version: Option<String>,
     pub network: String,
     pub prune_utxo: bool,
     pub throughput_tier: String,

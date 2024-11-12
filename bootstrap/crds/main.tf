@@ -83,7 +83,6 @@ resource "kubernetes_manifest" "customresourcedefinition_kupoports_demeter_run" 
                   }
                   "required" = [
                     "network",
-                    "operatorVersion",
                     "pruneUtxo",
                     "throughputTier",
                   ]
