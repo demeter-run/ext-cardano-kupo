@@ -22,7 +22,7 @@ pub struct KupoProxy {
 }
 impl KupoProxy {
     pub fn new(state: Arc<State>, config: Arc<Config>) -> Self {
-        let host_regex = Regex::new(r"(dmtr_[\w\d-]+)?\.?.+").unwrap();
+        let host_regex = Regex::new(r"([dmtr_]?[\w\d-]+)?\.?.+").unwrap();
 
         Self {
             state,
