@@ -7,9 +7,8 @@ resource "kubernetes_service_v1" "proxy_service_aws" {
       "service.beta.kubernetes.io/aws-load-balancer-nlb-target-type" : "instance"
       "service.beta.kubernetes.io/aws-load-balancer-scheme" : "internet-facing"
       "service.beta.kubernetes.io/aws-load-balancer-type" : "external"
-      "service.beta.kubernetes.io/aws-load-balancer-healthcheck-protocol" : "HTTP"
-      "service.beta.kubernetes.io/aws-load-balancer-healthcheck-path" : "/health"
-      "service.beta.kubernetes.io/aws-load-balancer-healthcheck-port" : var.healthcheck_port != null ? var.healthcheck_port : "traffic-port"
+      "service.beta.kubernetes.io/aws-load-balancer-healthcheck-protocol" : "HTTPS"
+      "service.beta.kubernetes.io/aws-load-balancer-healthcheck-path" : "/dmtr_health"
     }
   }
 
@@ -19,15 +18,8 @@ resource "kubernetes_service_v1" "proxy_service_aws" {
 
     port {
       name        = "proxy"
-      port        = 9443
+      port        = 443
       target_port = local.proxy_port
-      protocol    = "TCP"
-    }
-
-    port {
-      name        = "health"
-      port        = 80
-      target_port = local.prometheus_port
       protocol    = "TCP"
     }
 
