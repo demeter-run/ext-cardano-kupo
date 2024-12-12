@@ -104,6 +104,29 @@ variable "proxy_resources" {
   }
 }
 
+variable "operator_resources" {
+  type = object({
+    limits = object({
+      cpu    = string
+      memory = string
+    })
+    requests = object({
+      cpu    = string
+      memory = string
+    })
+  })
+  default = {
+    limits : {
+      cpu : "300m",
+      memory : "1Gi"
+    }
+    requests : {
+      cpu : "150m",
+      memory : "1Gi"
+    }
+  }
+}
+
 variable "storage_class" {
   type    = string
   default = "nvme"
