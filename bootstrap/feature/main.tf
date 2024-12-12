@@ -66,7 +66,7 @@ variable "resources" {
     }
     requests : {
       cpu : "150m",
-      memory : "250Mi"
+      memory : "1Gi"
     }
   }
 }
