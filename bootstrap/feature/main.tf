@@ -48,3 +48,25 @@ output "namespace" {
   value = var.namespace
 }
 
+variable "resources" {
+  type = object({
+    limits = object({
+      cpu    = string
+      memory = string
+    })
+    requests = object({
+      cpu    = string
+      memory = string
+    })
+  })
+  default = {
+    limits : {
+      cpu : "300m",
+      memory : "1Gi"
+    }
+    requests : {
+      cpu : "150m",
+      memory : "250Mi"
+    }
+  }
+}

@@ -14,6 +14,7 @@ module "kupo_feature" {
   api_key_salt        = var.api_key_salt
   per_request_dcus    = var.per_request_dcus
   namespace           = var.namespace
+  resources           = var.operator_resources
 }
 
 module "kupo_configs" {
