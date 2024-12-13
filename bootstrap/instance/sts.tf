@@ -16,7 +16,7 @@ locals {
     "origin",
   ]
   temp_args = var.pruned ? concat(local.base_args, ["--prune-utxo"]) : local.base_args
-  args = var.defer_indexes ? concat(local.temp_args, ["--defer-db-indexes"]) : local.temp_args
+  args      = var.defer_indexes ? concat(local.temp_args, ["--defer-db-indexes"]) : local.temp_args
 }
 
 resource "kubernetes_stateful_set_v1" "kupo" {
@@ -161,25 +161,14 @@ resource "kubernetes_stateful_set_v1" "kupo" {
           }
         }
 
-        toleration {
-          effect   = "NoSchedule"
-          key      = "demeter.run/compute-profile"
-          operator = "Equal"
-          value    = "disk-intensive"
-        }
-
-        toleration {
-          effect   = "NoSchedule"
-          key      = "demeter.run/compute-arch"
-          operator = "Equal"
-          value    = "x86"
-        }
-
-        toleration {
-          effect   = "NoSchedule"
-          key      = "demeter.run/availability-sla"
-          operator = "Equal"
-          value    = "consistent"
+        dynamic "toleration" {
+          for_each = var.tolerations
+          content {
+            effect   = toleration.value.effect
+            key      = toleration.value.key
+            operator = toleration.value.operator
+            value    = toleration.value.value
+          }
         }
       }
     }
