@@ -43,5 +43,11 @@ variable "instances" {
         memory = string
       })
     }))
+    tolerations = optional(list(object({
+      effect   = string
+      key      = string
+      operator = string
+      value    = optional(string)
+    })))
   }))
 }

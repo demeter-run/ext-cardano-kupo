@@ -38,4 +38,5 @@ module "kupo_instances" {
       memory = "1Gi"
     }
   })
+  tolerations = each.value.tolerations
 }
