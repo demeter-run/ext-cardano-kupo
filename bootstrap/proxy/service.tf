@@ -43,7 +43,7 @@ resource "kubernetes_service_v1" "proxy_service_gcp" {
 
     port {
       name        = "proxy"
-      port        = 9443
+      port        = 443
       target_port = local.proxy_port
       protocol    = "TCP"
     }
