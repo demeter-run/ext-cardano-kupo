@@ -38,5 +38,24 @@ module "kupo_instances" {
       memory = "1Gi"
     }
   })
-  tolerations = each.value.tolerations
+  tolerations = coalesce(each.value.tolerations, [
+    {
+      effect   = "NoSchedule"
+      key      = "demeter.run/compute-profile"
+      operator = "Equal"
+      value    = "disk-intensive"
+    },
+    {
+      effect   = "NoSchedule"
+      key      = "demeter.run/compute-arch"
+      operator = "Equal"
+      value    = "x86"
+    },
+    {
+      effect   = "NoSchedule"
+      key      = "demeter.run/availability-sla"
+      operator = "Equal"
+      value    = "consistent"
+    }
+  ])
 }
