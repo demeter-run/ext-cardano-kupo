@@ -58,6 +58,7 @@ module "kupo_proxy" {
   proxy_image_tag = var.proxy_blue_image_tag
   resources       = var.proxy_resources
   name            = "proxy"
+  tolerations     = var.proxy_blue_tolerations
 }
 
 module "kupo_proxy_green" {
@@ -73,6 +74,7 @@ module "kupo_proxy_green" {
   resources       = var.proxy_resources
   environment     = "green"
   name            = "proxy-green"
+  tolerations     = var.proxy_green_tolerations
 }
 
 module "kupo_cells" {
