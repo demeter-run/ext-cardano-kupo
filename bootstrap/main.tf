@@ -47,34 +47,36 @@ module "kupo_services_non_pruned" {
 
 // blue (once we have a green, we can update its name to proxy-blue)
 module "kupo_proxy" {
-  depends_on      = [kubernetes_namespace.namespace]
-  source          = "./proxy"
-  cloud_provider  = var.cloud_provider
-  cluster_issuer  = var.cluster_issuer
-  namespace       = var.namespace
-  replicas        = var.proxy_blue_replicas
-  extension_name  = var.extension_subdomain
-  dns_zone        = var.dns_zone
-  proxy_image_tag = var.proxy_blue_image_tag
-  resources       = var.proxy_resources
-  name            = "proxy"
-  tolerations     = var.proxy_blue_tolerations
+  depends_on        = [kubernetes_namespace.namespace]
+  source            = "./proxy"
+  cloud_provider    = var.cloud_provider
+  cluster_issuer    = var.cluster_issuer
+  namespace         = var.namespace
+  replicas          = var.proxy_blue_replicas
+  extension_name    = var.extension_subdomain
+  extra_annotations = var.proxy_blue_extra_annotations
+  dns_zone          = var.dns_zone
+  proxy_image_tag   = var.proxy_blue_image_tag
+  resources         = var.proxy_resources
+  name              = "proxy"
+  tolerations       = var.proxy_blue_tolerations
 }
 
 module "kupo_proxy_green" {
-  depends_on      = [kubernetes_namespace.namespace]
-  source          = "./proxy"
-  cloud_provider  = var.cloud_provider
-  cluster_issuer  = var.cluster_issuer
-  namespace       = var.namespace
-  replicas        = var.proxy_green_replicas
-  extension_name  = var.extension_subdomain
-  dns_zone        = var.dns_zone
-  proxy_image_tag = var.proxy_green_image_tag
-  resources       = var.proxy_resources
-  environment     = "green"
-  name            = "proxy-green"
-  tolerations     = var.proxy_green_tolerations
+  depends_on        = [kubernetes_namespace.namespace]
+  source            = "./proxy"
+  cloud_provider    = var.cloud_provider
+  cluster_issuer    = var.cluster_issuer
+  namespace         = var.namespace
+  replicas          = var.proxy_green_replicas
+  extension_name    = var.extension_subdomain
+  extra_annotations = var.proxy_green_extra_annotations
+  dns_zone          = var.dns_zone
+  proxy_image_tag   = var.proxy_green_image_tag
+  resources         = var.proxy_resources
+  environment       = "green"
+  name              = "proxy-green"
+  tolerations       = var.proxy_green_tolerations
 }
 
 module "kupo_cells" {

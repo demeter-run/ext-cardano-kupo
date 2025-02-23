@@ -65,6 +65,12 @@ variable "extension_name" {
   type = string
 }
 
+variable "extra_annotations" {
+  description = "Extra annotations to add to the proxy services"
+  type        = map(string)
+  default     = {}
+}
+
 variable "networks" {
   type    = list(string)
   default = ["mainnet", "preprod", "preview"]
