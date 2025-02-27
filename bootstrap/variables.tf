@@ -63,6 +63,13 @@ variable "dns_zone" {
 }
 
 // Proxies
+
+// Proxy service annotations
+variable "proxy_green_extra_annotations" {
+  type    = map(string)
+  default = {}
+}
+
 variable "proxy_green_image_tag" {
   type = string
 }
@@ -70,6 +77,12 @@ variable "proxy_green_image_tag" {
 variable "proxy_green_replicas" {
   type    = number
   default = 1
+}
+
+// Proxy service annotations
+variable "proxy_blue_extra_annotations" {
+  type    = map(string)
+  default = {}
 }
 
 variable "proxy_blue_image_tag" {
