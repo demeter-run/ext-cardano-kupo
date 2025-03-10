@@ -71,19 +71,9 @@ variable "extra_annotations" {
   default     = {}
 }
 
-variable "networks" {
-  type    = list(string)
-  default = ["mainnet", "preprod", "preview"]
-}
-
-variable "versions" {
-  type    = list(string)
-  default = ["2"]
-}
-
-variable "dns_zone" {
-  type    = string
-  default = "demeter.run"
+variable "dns_names" {
+  description = "URL that will hit this proxies, used to create TLS certificates"
+  type        = list(string)
 }
 
 variable "cloud_provider" {
@@ -99,6 +89,11 @@ variable "healthcheck_port" {
 variable "cluster_issuer" {
   type    = string
   default = "letsencrypt"
+}
+
+variable "cert_secret_name" {
+  type    = string
+  default = null
 }
 
 variable "tolerations" {

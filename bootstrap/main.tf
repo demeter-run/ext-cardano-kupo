@@ -1,3 +1,12 @@
+locals {
+  by_network = [
+    for network in var.networks : "*.${network}-v2.${var.extension_subdomain}.${var.dns_zone}"
+  ]
+
+  # Add the extra URL to the list of generated URLs
+  dns_names = concat(local.by_network, ["*.${var.extension_subdomain}.${var.dns_zone}"])
+}
+
 resource "kubernetes_namespace" "namespace" {
   metadata {
     name = var.namespace
@@ -55,11 +64,11 @@ module "kupo_proxy" {
   replicas          = var.proxy_blue_replicas
   extension_name    = var.extension_subdomain
   extra_annotations = var.proxy_blue_extra_annotations
-  dns_zone          = var.dns_zone
   proxy_image_tag   = var.proxy_blue_image_tag
   resources         = var.proxy_resources
   name              = "proxy"
   tolerations       = var.proxy_blue_tolerations
+  dns_names         = local.dns_names
 }
 
 module "kupo_proxy_green" {
@@ -71,12 +80,12 @@ module "kupo_proxy_green" {
   replicas          = var.proxy_green_replicas
   extension_name    = var.extension_subdomain
   extra_annotations = var.proxy_green_extra_annotations
-  dns_zone          = var.dns_zone
   proxy_image_tag   = var.proxy_green_image_tag
   resources         = var.proxy_resources
   environment       = "green"
   name              = "proxy-green"
   tolerations       = var.proxy_green_tolerations
+  dns_names         = local.dns_names
 }
 
 module "kupo_cells" {
