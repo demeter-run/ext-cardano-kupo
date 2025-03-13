@@ -82,3 +82,45 @@ variable "tolerations" {
     }
   ]
 }
+
+variable "node_affinity" {
+  type = object({
+    required_during_scheduling_ignored_during_execution = optional(
+      object({
+        node_selector_term = optional(
+          list(object({
+            match_expressions = optional(
+              list(object({
+                key      = string
+                operator = string
+                values   = list(string)
+              })), []
+            )
+          })), []
+        )
+      }), {}
+    )
+    preferred_during_scheduling_ignored_during_execution = optional(
+      list(object({
+        weight = number
+        preference = object({
+          match_expressions = optional(
+            list(object({
+              key      = string
+              operator = string
+              values   = list(string)
+            })), []
+          )
+          match_fields = optional(
+            list(object({
+              key      = string
+              operator = string
+              values   = list(string)
+            })), []
+          )
+        })
+      })), []
+    )
+  })
+  default = {}
+}

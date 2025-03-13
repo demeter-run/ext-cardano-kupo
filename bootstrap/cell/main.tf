@@ -30,11 +30,11 @@ module "kupo_instances" {
 
   resources = coalesce(each.value.resources, {
     limits = {
-      cpu    = "1",
+      cpu    = "1"
       memory = "1Gi"
     }
     requests = {
-      cpu    = "500m",
+      cpu    = "500m"
       memory = "1Gi"
     }
   })
@@ -58,4 +58,8 @@ module "kupo_instances" {
       value    = "consistent"
     }
   ])
+  node_affinity = coalesce(each.value.node_affinity, {
+    required_during_scheduling_ignored_during_execution  = {}
+    preferred_during_scheduling_ignored_during_execution = []
+  })
 }
