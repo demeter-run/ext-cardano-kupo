@@ -1,5 +1,3 @@
-use auth::AuthBackgroundService;
-use config::Config;
 use dotenv::dotenv;
 use operator::{kube::ResourceExt, KupoPort};
 use pingora::{
@@ -8,18 +6,23 @@ use pingora::{
 };
 use pingora_limits::rate::Rate;
 use prometheus::{opts, register_int_counter_vec};
-use proxy::KupoProxy;
 use regex::Regex;
 use serde::{Deserialize, Deserializer};
 use std::{collections::HashMap, fmt::Display, sync::Arc, time::Duration};
-use tiers::TierBackgroundService;
 use tokio::sync::RwLock;
 use tracing::Level;
 
 mod auth;
 mod config;
+mod health;
 mod proxy;
 mod tiers;
+
+use auth::AuthBackgroundService;
+use config::Config;
+use health::HealthBackgroundService;
+use proxy::KupoProxy;
+use tiers::TierBackgroundService;
 
 fn main() {
     dotenv().ok();
@@ -62,6 +65,12 @@ fn main() {
     prometheus_service.add_tcp(&config.prometheus_addr);
     server.add_service(prometheus_service);
 
+    let health_background_service = background_service(
+        "K8S Auth Service",
+        HealthBackgroundService::new(state.clone(), config.clone()),
+    );
+    server.add_service(health_background_service);
+
     server.run_forever();
 }
 
@@ -71,6 +80,7 @@ pub struct State {
     tiers: RwLock<HashMap<String, Tier>>,
     limiter: RwLock<HashMap<String, Vec<(TierRate, Rate)>>>,
     metrics: Metrics,
+    upstream_health: RwLock<bool>,
 }
 impl State {
     pub async fn get_consumer(&self, key: &str) -> Option<Consumer> {

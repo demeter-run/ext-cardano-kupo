@@ -2,6 +2,7 @@ use std::{env, path::PathBuf, time::Duration};
 
 #[derive(Debug, Clone)]
 pub struct Config {
+    pub network: String,
     pub proxy_addr: String,
     pub proxy_namespace: String,
     pub proxy_tiers_path: PathBuf,
@@ -11,14 +12,15 @@ pub struct Config {
     pub ssl_key_path: String,
     pub kupo_port: u16,
     pub kupo_dns: String,
-    pub default_kupo_version: String,
 
     // Health endpoint
     pub health_endpoint: String,
+    pub health_poll_interval: std::time::Duration,
 }
 impl Config {
     pub fn new() -> Self {
         Self {
+            network: env::var("NETWORK").expect("NETWORK must be set"),
             proxy_addr: env::var("PROXY_ADDR").expect("PROXY_ADDR must be set"),
             proxy_namespace: env::var("PROXY_NAMESPACE").expect("PROXY_NAMESPACE must be set"),
             proxy_tiers_path: env::var("PROXY_TIERS_PATH")
@@ -40,8 +42,25 @@ impl Config {
                 .parse()
                 .expect("KUPO_PORT must a number"),
             kupo_dns: env::var("KUPO_DNS").expect("KUPO_DNS must be set"),
-            default_kupo_version: env::var("DEFAULT_KUPO_VERSION").unwrap_or("2".into()),
             health_endpoint: "/dmtr_health".to_string(),
+            health_poll_interval: env::var("HEALTH_POLL_INTERVAL")
+                .map(|v| {
+                    Duration::from_secs(
+                        v.parse::<u64>()
+                            .expect("HEALTH_POLL_INTERVAL must be a number in seconds. eg: 2"),
+                    )
+                })
+                .unwrap_or(Duration::from_secs(10)),
+        }
+    }
+
+    pub fn instance(&self, pruned: bool) -> String {
+        match pruned {
+            true => format!(
+                "kupo-{}-pruned.{}:{}",
+                self.network, self.kupo_dns, self.kupo_port
+            ),
+            false => format!("kupo-{}.{}:{}", self.network, self.kupo_dns, self.kupo_port),
         }
     }
 }
