@@ -21,7 +21,7 @@ pub struct Configuration {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
-#[serde(rename_all = "lowercase")] //optional, makes enum values lowercase in json.
+#[serde(rename_all = "lowercase")]
 pub enum ConnectionStatus {
     Connected,
     Disconnected,
@@ -79,7 +79,7 @@ impl HealthBackgroundService {
 
         match (current_health, new_health) {
             (false, true) => info!("Upstream is now healthy, ready to proxy requests."),
-            (true, false) => warn!("Upstream is now deamed unhealthy, no pods in running state"),
+            (true, false) => warn!("Upstream is now deamed unhealthy."),
             _ => {}
         }
 
