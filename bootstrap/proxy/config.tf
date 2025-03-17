@@ -1,6 +1,6 @@
 // numbers here should consider number of proxy replicas
 locals {
-  config_map_name = var.environment != null ? "${var.environment}-proxy-config" : "proxy-config"
+  config_map_name = var.environment != null ? "${var.environment}-proxy-${var.network}-config" : "proxy-${var.network}-config"
 
   tiers = [
     {

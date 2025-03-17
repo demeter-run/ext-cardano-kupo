@@ -50,6 +50,11 @@ resource "kubernetes_deployment_v1" "kupo_proxy" {
           }
 
           env {
+            name  = "NETWORK"
+            value = var.network
+          }
+
+          env {
             name  = "PROXY_NAMESPACE"
             value = var.namespace
           }

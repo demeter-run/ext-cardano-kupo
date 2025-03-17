@@ -4,8 +4,8 @@ locals {
     ? var.cert_secret_name
     : (
       var.environment != null
-      ? "${var.extension_name}-${var.environment}-proxy-wildcard-tls"
-      : "${var.extension_name}-proxy-wildcard-tls"
+      ? "${var.extension_name}-${var.environment}-proxy-${var.network}-wildcard-tls"
+      : "${var.extension_name}-proxy-${var.network}-wildcard-tls"
     )
   )
 }

@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use bytes::Bytes;
 use pingora::http::ResponseHeader;
 use pingora::Result;
 use pingora::{
@@ -78,9 +79,20 @@ impl KupoProxy {
     async fn respond_health(&self, session: &mut Session, ctx: &mut Context) {
         ctx.is_health_request = true;
         session.set_keepalive(None);
-        session.write_response_body("OK".into()).await.unwrap();
-        let header = Box::new(ResponseHeader::build(200, None).unwrap());
-        session.write_response_header(header).await.unwrap();
+
+        let is_healthy = *self.state.upstream_health.read().await;
+        let (code, message) = if is_healthy {
+            (200, "OK")
+        } else {
+            (500, "UNHEALTHY")
+        };
+
+        let header = Box::new(ResponseHeader::build(code, None).unwrap());
+        session.write_response_header(header, true).await.unwrap();
+        session
+            .write_response_body(Some(Bytes::from(message)), true)
+            .await
+            .unwrap();
     }
 }
 
@@ -123,26 +135,21 @@ impl ProxyHttp for KupoProxy {
             .or_else(|| captures.get(1).map(|v| v.as_str()))
             .unwrap_or_default();
 
-        let consumer = state.get_consumer(key).await;
-        if consumer.is_none() {
-            session.respond_error(401).await;
+        let Some(consumer) = state.get_consumer(key).await else {
+            session.respond_error(401).await?;
+            return Ok(true);
+        };
+
+        if consumer.network != self.config.network {
+            session.respond_error(401).await?;
             return Ok(true);
         }
 
-        ctx.consumer = consumer.unwrap();
-        ctx.instance = match ctx.consumer.pruned {
-            true => format!(
-                "kupo-{}-pruned.{}:{}",
-                ctx.consumer.network, self.config.kupo_dns, self.config.kupo_port
-            ),
-            false => format!(
-                "kupo-{}.{}:{}",
-                ctx.consumer.network, self.config.kupo_dns, self.config.kupo_port
-            ),
-        };
+        ctx.consumer = consumer;
+        ctx.instance = self.config.instance(ctx.consumer.pruned);
 
         if self.limiter(&ctx.consumer).await? {
-            session.respond_error(429).await;
+            session.respond_error(429).await?;
             return Ok(true);
         }
 

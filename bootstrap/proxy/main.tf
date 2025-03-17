@@ -1,6 +1,6 @@
 locals {
   name = var.name
-  role = "proxy"
+  role = "proxy-${var.network}"
 
   prometheus_port = 9187
   prometheus_addr = "0.0.0.0:${local.prometheus_port}"
@@ -12,6 +12,10 @@ locals {
 variable "name" {
   type    = string
   default = "proxy"
+}
+
+variable "network" {
+  type = string
 }
 
 // blue - green
