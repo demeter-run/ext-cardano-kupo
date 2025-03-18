@@ -1,12 +1,3 @@
-locals {
-  by_network = [
-    for network in var.networks : "*.${network}-v2.${var.extension_subdomain}.${var.dns_zone}"
-  ]
-
-  # Add the extra URL to the list of generated URLs
-  dns_names = concat(local.by_network, ["*.${var.extension_subdomain}.${var.dns_zone}"])
-}
-
 resource "kubernetes_namespace" "namespace" {
   metadata {
     name = var.namespace
@@ -55,7 +46,7 @@ module "kupo_services_non_pruned" {
 }
 
 // blue (once we have a green, we can update its name to proxy-blue)
-module "kupo_proxies" {
+module "kupo_proxies_blue" {
   depends_on = [kubernetes_namespace.namespace]
   for_each   = { for network in var.networks : "${network}" => network }
   source     = "./proxy"
@@ -69,12 +60,17 @@ module "kupo_proxies" {
   extra_annotations = var.proxy_blue_extra_annotations
   proxy_image_tag   = var.proxy_blue_image_tag
   resources         = var.proxy_resources
-  name              = "proxy"
+  environment       = "blue"
+  name              = "proxy-blue-${each.value}"
   tolerations       = var.proxy_blue_tolerations
-  dns_names         = local.dns_names
+  cert_secret_name  = "proxy-blue-${each.value}-wildcard-tls"
+  dns_names = [
+    "${each.value}-v2.${var.extension_subdomain}.${var.dns_zone}",
+    "*.${each.value}-v2.${var.extension_subdomain}.${var.dns_zone}"
+  ]
 }
 
-module "kupo_proxy_green" {
+module "kupo_proxies_green" {
   for_each   = { for network in var.networks : "${network}" => network }
   depends_on = [kubernetes_namespace.namespace]
   source     = "./proxy"
@@ -89,9 +85,13 @@ module "kupo_proxy_green" {
   proxy_image_tag   = var.proxy_green_image_tag
   resources         = var.proxy_resources
   environment       = "green"
-  name              = "proxy-green"
+  name              = "proxy-green-${each.value}"
   tolerations       = var.proxy_green_tolerations
-  dns_names         = local.dns_names
+  cert_secret_name  = "proxy-green-${each.value}-wildcard-tls"
+  dns_names = [
+    "${each.value}-v2.${var.extension_subdomain}.${var.dns_zone}",
+    "*.${each.value}-v2.${var.extension_subdomain}.${var.dns_zone}"
+  ]
 }
 
 module "kupo_cells" {
