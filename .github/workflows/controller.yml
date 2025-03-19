@@ -7,6 +7,7 @@ on:
     paths:
       - ".github/workflows/controller.yml"
       - "operator/**"
+      - "docker/dockerfile.operator"
 
 jobs:
   build-images:
