@@ -57,7 +57,7 @@ module "kupo_proxies_blue" {
   namespace         = var.namespace
   replicas          = var.proxy_blue_replicas
   extension_name    = var.extension_subdomain
-  extra_annotations = var.proxy_blue_extra_annotations
+  extra_annotations = lookup(var.proxy_blue_extra_annotations_by_network, each.value, {})
   proxy_image_tag   = var.proxy_blue_image_tag
   resources         = var.proxy_resources
   environment       = "blue"
@@ -81,7 +81,7 @@ module "kupo_proxies_green" {
   namespace         = var.namespace
   replicas          = var.proxy_green_replicas
   extension_name    = var.extension_subdomain
-  extra_annotations = var.proxy_green_extra_annotations
+  extra_annotations = lookup(var.proxy_green_extra_annotations_by_network, each.value, {})
   proxy_image_tag   = var.proxy_green_image_tag
   resources         = var.proxy_resources
   environment       = "green"
