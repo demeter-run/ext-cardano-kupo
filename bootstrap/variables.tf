@@ -65,9 +65,14 @@ variable "dns_zone" {
 // Proxies
 
 // Proxy service annotations
-variable "proxy_green_extra_annotations" {
-  type    = map(string)
-  default = {}
+variable "proxy_green_extra_annotations_by_network" {
+  description = <<EOT
+A map where keys are network names (only those defined in the "networks" variable)
+and values are maps of extra annotations for the green proxy service specific
+to that network.
+EOT
+  type        = map(map(string))
+  default     = {}
 }
 
 variable "proxy_green_image_tag" {
@@ -80,9 +85,14 @@ variable "proxy_green_replicas" {
 }
 
 // Proxy service annotations
-variable "proxy_blue_extra_annotations" {
-  type    = map(string)
-  default = {}
+variable "proxy_blue_extra_annotations_by_network" {
+  description = <<EOT
+A map where keys are network names (only those defined in the "networks" variable)
+and values are maps of extra annotations for the blue proxy service specific
+to that network.
+EOT
+  type        = map(map(string))
+  default     = {}
 }
 
 variable "proxy_blue_image_tag" {
