@@ -120,7 +120,7 @@ spec:
     spec:
       containers:
         - name: prometheus
-          image: prom/prometheus
+          image: prom/prometheus:v2.54.1
           ports:
             - name: prometheus
               containerPort: 9090
@@ -244,6 +244,8 @@ spec:
           ports:
             - containerPort: 80
           env:
+            - name: NETWORK
+              value: "mainnet"
             - name: PROXY_ADDR
               value: "0.0.0.0:80"
             - name: PROXY_NAMESPACE

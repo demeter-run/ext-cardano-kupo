@@ -16,9 +16,13 @@ pub struct Config {
     // Health endpoint
     pub health_endpoint: String,
     pub health_poll_interval: std::time::Duration,
+    pub private_endpoint: String,
 }
 impl Config {
     pub fn new() -> Self {
+        let private_endpoint = env::var("KUPO_PRIVATE_ENDPOINT_REGEX")
+            .unwrap_or(r"^PUT/patterns(?:/.*)?$".to_string());
+
         Self {
             network: env::var("NETWORK").expect("NETWORK must be set"),
             proxy_addr: env::var("PROXY_ADDR").expect("PROXY_ADDR must be set"),
@@ -51,6 +55,7 @@ impl Config {
                     )
                 })
                 .unwrap_or(Duration::from_secs(10)),
+            private_endpoint,
         }
     }
 
