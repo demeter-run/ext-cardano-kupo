@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use bytes::Bytes;
-use pingora::http::ResponseHeader;
+use pingora::http::{ResponseHeader, StatusCode};
 use pingora::Result;
 use pingora::{
     proxy::{ProxyHttp, Session},
@@ -20,15 +20,18 @@ pub struct KupoProxy {
     state: Arc<State>,
     config: Arc<Config>,
     host_regex: Regex,
+    private_endpoint_regex: Regex,
 }
 impl KupoProxy {
     pub fn new(state: Arc<State>, config: Arc<Config>) -> Self {
         let host_regex = Regex::new(r"([dmtr_]?[\w\d-]+)?\.?.+").unwrap();
+        let private_endpoint_regex = Regex::new(&config.private_endpoint).unwrap();
 
         Self {
             state,
             config,
             host_regex,
+            private_endpoint_regex,
         }
     }
 
@@ -94,6 +97,20 @@ impl KupoProxy {
             .await
             .unwrap();
     }
+
+    async fn respond_unauthorized(&self, session: &mut Session) {
+        session.set_keepalive(None);
+
+        let header = Box::new(ResponseHeader::build(StatusCode::UNAUTHORIZED, None).unwrap());
+        session.write_response_header(header, true).await.unwrap();
+        session
+            .write_response_body(
+                Some(Bytes::from("unauthorized to request the endpoint")),
+                true,
+            )
+            .await
+            .unwrap();
+    }
 }
 
 #[derive(Debug, Default)]
@@ -120,6 +137,12 @@ impl ProxyHttp for KupoProxy {
         let path = session.req_header().uri.path();
         if path == self.config.health_endpoint {
             self.respond_health(session, ctx).await;
+            return Ok(true);
+        }
+
+        let pattern = format!("{}{path}", &session.req_header().method);
+        if self.private_endpoint_regex.is_match(&pattern) {
+            self.respond_unauthorized(session).await;
             return Ok(true);
         }
 
