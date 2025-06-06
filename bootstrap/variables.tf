@@ -62,6 +62,12 @@ variable "dns_zone" {
   default = "demeter.run"
 }
 
+variable "dns_names" {
+  description = "URL that will hit this proxies, used to create TLS certificates"
+  type        = list(string)
+  default     = null
+}
+
 // Proxies
 
 // Proxy service annotations
