@@ -64,10 +64,10 @@ module "kupo_proxies_blue" {
   name              = "proxy-blue-${each.value}"
   tolerations       = var.proxy_blue_tolerations
   cert_secret_name  = "proxy-blue-${each.value}-wildcard-tls"
-  dns_names = var.dns_names != null ? var.dns_names : [
+  dns_names = lookup(var.dns_names, each.value, [
     "${each.value}-v2.${var.extension_subdomain}.${var.dns_zone}",
     "*.${each.value}-v2.${var.extension_subdomain}.${var.dns_zone}"
-  ]
+  ])
 }
 
 module "kupo_proxies_green" {
@@ -88,10 +88,10 @@ module "kupo_proxies_green" {
   name              = "proxy-green-${each.value}"
   tolerations       = var.proxy_green_tolerations
   cert_secret_name  = "proxy-green-${each.value}-wildcard-tls"
-  dns_names = var.dns_names != null ? var.dns_names : [
+  dns_names = lookup(var.dns_names, each.value, [
     "${each.value}-v2.${var.extension_subdomain}.${var.dns_zone}",
     "*.${each.value}-v2.${var.extension_subdomain}.${var.dns_zone}"
-  ]
+  ])
 }
 
 module "kupo_cells" {
