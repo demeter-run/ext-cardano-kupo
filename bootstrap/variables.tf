@@ -63,9 +63,9 @@ variable "dns_zone" {
 }
 
 variable "dns_names" {
-  description = "URL that will hit this proxies, used to create TLS certificates"
-  type        = list(string)
-  default     = null
+  description = "Map of network to list of DNS names"
+  type        = map(list(string))
+  default     = {}
 }
 
 // Proxies
