@@ -15,6 +15,7 @@ module "kupo_feature" {
   per_request_dcus    = var.per_request_dcus
   namespace           = var.namespace
   resources           = var.operator_resources
+  tolerations         = var.operator_tolerations
 }
 
 module "kupo_configs" {
