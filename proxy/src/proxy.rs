@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use bytes::Bytes;
-use pingora::http::{ResponseHeader, StatusCode};
+use pingora::http::{Method, ResponseHeader, StatusCode};
 use pingora::Result;
 use pingora::{
     proxy::{ProxyHttp, Session},
@@ -112,6 +112,19 @@ impl KupoProxy {
             .await
             .unwrap();
     }
+
+    async fn respond_options(&self, session: &mut Session) {
+        let mut header = Box::new(ResponseHeader::build(StatusCode::NO_CONTENT, None).unwrap());
+        KupoProxy::add_cors_headers(&mut header).unwrap();
+        session.write_response_header(header, true).await.unwrap();
+    }
+
+    fn add_cors_headers(resp: &mut ResponseHeader) -> Result<()> {
+        resp.insert_header("Access-Control-Allow-Origin", "*")?;
+        resp.insert_header("Access-Control-Allow-Methods", "GET, OPTIONS")?;
+        resp.insert_header("Access-Control-Allow-Headers", "Content-Type, Accept")?;
+        resp.insert_header("Access-Control-Max-Age", "86400")
+    }
 }
 
 #[derive(Debug, Default)]
@@ -149,6 +162,11 @@ impl ProxyHttp for KupoProxy {
             return Ok(true);
         }
 
+        if session.req_header().method == Method::OPTIONS {
+            self.respond_options(session).await;
+            return Ok(true);
+        }
+
         // Extract key from host or header.
         let host = session
             .get_header("host")
@@ -180,6 +198,19 @@ impl ProxyHttp for KupoProxy {
         }
 
         Ok(false)
+    }
+
+    async fn response_filter(
+        &self,
+        _session: &mut Session,
+        upstream_response: &mut ResponseHeader,
+        _ctx: &mut Self::CTX,
+    ) -> Result<()>
+    where
+        Self::CTX: Send + Sync,
+    {
+        KupoProxy::add_cors_headers(upstream_response)?;
+        Ok(())
     }
 
     async fn upstream_peer(
