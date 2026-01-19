@@ -115,15 +115,15 @@ impl KupoProxy {
 
     async fn respond_options(&self, session: &mut Session) {
         let mut header = Box::new(ResponseHeader::build(StatusCode::NO_CONTENT, None).unwrap());
-        KupoProxy::add_cors_headers(&mut header).unwrap();
+        KupoProxy::add_cors_headers(&mut header, &self.config).unwrap();
         session.write_response_header(header, true).await.unwrap();
     }
 
-    fn add_cors_headers(resp: &mut ResponseHeader) -> Result<()> {
-        resp.insert_header("Access-Control-Allow-Origin", "*")?;
-        resp.insert_header("Access-Control-Allow-Methods", "GET, OPTIONS")?;
-        resp.insert_header("Access-Control-Allow-Headers", "Content-Type, Accept")?;
-        resp.insert_header("Access-Control-Max-Age", "86400")
+    fn add_cors_headers(resp: &mut ResponseHeader, config: &Config) -> Result<()> {
+        resp.insert_header("Access-Control-Allow-Origin", &config.cors_allow_origin)?;
+        resp.insert_header("Access-Control-Allow-Methods", &config.cors_allow_methods)?;
+        resp.insert_header("Access-Control-Allow-Headers", &config.cors_allow_headers)?;
+        resp.insert_header("Access-Control-Max-Age", &config.cors_max_age)
     }
 }
 
@@ -209,7 +209,7 @@ impl ProxyHttp for KupoProxy {
     where
         Self::CTX: Send + Sync,
     {
-        KupoProxy::add_cors_headers(upstream_response)?;
+        KupoProxy::add_cors_headers(upstream_response, &self.config)?;
         Ok(())
     }
 

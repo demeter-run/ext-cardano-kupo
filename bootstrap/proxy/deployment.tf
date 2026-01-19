@@ -99,6 +99,26 @@ resource "kubernetes_deployment_v1" "kupo_proxy" {
             value = "/configs/tiers.toml"
           }
 
+          env {
+            name  = "CORS_ALLOW_ORIGIN"
+            value = "*"
+          }
+
+          env {
+            name  = "CORS_ALLOW_METHODS"
+            value = "GET, OPTIONS"
+          }
+
+          env {
+            name  = "CORS_ALLOW_HEADERS"
+            value = "Content-Type, Accept, Dmtr-api-key, traceparent"
+          }
+
+          env {
+            name  = "CORS_MAX_AGE"
+            value = "86400"
+          }
+
           volume_mount {
             mount_path = "/certs"
             name       = "certs"
