@@ -1,13 +1,11 @@
 use crate::{Consumer, State};
 use async_trait::async_trait;
 use futures_util::TryStreamExt;
-use operator::{
-    kube::{
-        runtime::watcher::{self, Config as ConfigWatcher, Event},
-        Api, Client, ResourceExt,
-    },
-    KupoPort,
+use kube::{
+    runtime::watcher::{self, Config as ConfigWatcher, Event},
+    Api, Client, ResourceExt,
 };
+use operator::KupoPort;
 use pingora::{server::ShutdownWatch, services::background::BackgroundService};
 use std::{collections::HashMap, sync::Arc};
 use tokio::pin;
@@ -83,10 +81,23 @@ impl BackgroundService for AuthBackgroundService {
                     continue;
                 }
                 // Unexpected error when streaming CRDs.
-                Err(err) => {
-                    error!(error = err.to_string(), "auth: Failed to update crds.");
-                    std::process::exit(1);
-                }
+                Err(err) => match err {
+                    watcher::Error::WatchError(status) => {
+                        error!(
+                            code = status.code,
+                            reason = ?status.reason,
+                            message = ?status.message,
+                            "auth: Watch error received from API server"
+                        );
+                        continue;
+                    }
+                    other => {
+                        // For other errors, wait a bit and retry (self-healing).
+                        error!(error = %other, "auth: Watch failed, retrying");
+                        tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+                        continue;
+                    }
+                },
             }
         }
     }
