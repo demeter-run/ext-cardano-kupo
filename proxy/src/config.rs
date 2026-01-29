@@ -17,6 +17,12 @@ pub struct Config {
     pub health_endpoint: String,
     pub health_poll_interval: std::time::Duration,
     pub private_endpoint: String,
+
+    // CORS configuration
+    pub cors_allow_origin: String,
+    pub cors_allow_methods: String,
+    pub cors_allow_headers: String,
+    pub cors_max_age: String,
 }
 impl Config {
     pub fn new() -> Self {
@@ -56,6 +62,14 @@ impl Config {
                 })
                 .unwrap_or(Duration::from_secs(10)),
             private_endpoint,
+
+            // CORS configuration
+            cors_allow_origin: env::var("CORS_ALLOW_ORIGIN").unwrap_or("*".to_string()),
+            cors_allow_methods: env::var("CORS_ALLOW_METHODS")
+                .unwrap_or("GET, OPTIONS".to_string()),
+            cors_allow_headers: env::var("CORS_ALLOW_HEADERS")
+                .unwrap_or("Content-Type, Accept".to_string()),
+            cors_max_age: env::var("CORS_MAX_AGE").unwrap_or("86400".to_string()),
         }
     }
 
