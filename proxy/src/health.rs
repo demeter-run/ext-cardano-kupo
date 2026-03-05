@@ -46,7 +46,7 @@ impl HealthBackgroundService {
         };
 
         let response = match client
-            .get(format!("http://{}/health", self.config.instance(true)))
+            .get(format!("http://{}/health", self.config.kupo_instance))
             .header("Accept", "application/json")
             .send()
             .await

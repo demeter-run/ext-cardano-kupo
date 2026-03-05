@@ -59,9 +59,8 @@ variable "resources" {
   }
 }
 
-variable "kupo_port" {
-  type    = number
-  default = 1442
+variable "kupo_instance" {
+  type = string
 }
 
 

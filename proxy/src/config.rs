@@ -10,8 +10,7 @@ pub struct Config {
     pub prometheus_addr: String,
     pub ssl_crt_path: String,
     pub ssl_key_path: String,
-    pub kupo_port: u16,
-    pub kupo_dns: String,
+    pub kupo_instance: String,
 
     // Health endpoint
     pub health_endpoint: String,
@@ -47,11 +46,7 @@ impl Config {
             prometheus_addr: env::var("PROMETHEUS_ADDR").expect("PROMETHEUS_ADDR must be set"),
             ssl_crt_path: env::var("SSL_CRT_PATH").expect("SSL_CRT_PATH must be set"),
             ssl_key_path: env::var("SSL_KEY_PATH").expect("SSL_KEY_PATH must be set"),
-            kupo_port: env::var("KUPO_PORT")
-                .expect("KUPO_PORT must be set")
-                .parse()
-                .expect("KUPO_PORT must a number"),
-            kupo_dns: env::var("KUPO_DNS").expect("KUPO_DNS must be set"),
+            kupo_instance: env::var("KUPO_INSTANCE").expect("KUPO_INSTANCE must be set"),
             health_endpoint: "/dmtr_health".to_string(),
             health_poll_interval: env::var("HEALTH_POLL_INTERVAL")
                 .map(|v| {
@@ -72,17 +67,8 @@ impl Config {
             cors_max_age: env::var("CORS_MAX_AGE").unwrap_or("86400".to_string()),
         }
     }
-
-    pub fn instance(&self, pruned: bool) -> String {
-        match pruned {
-            true => format!(
-                "kupo-{}-pruned.{}:{}",
-                self.network, self.kupo_dns, self.kupo_port
-            ),
-            false => format!("kupo-{}.{}:{}", self.network, self.kupo_dns, self.kupo_port),
-        }
-    }
 }
+
 impl Default for Config {
     fn default() -> Self {
         Self::new()

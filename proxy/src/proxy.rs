@@ -190,7 +190,7 @@ impl ProxyHttp for KupoProxy {
         }
 
         ctx.consumer = consumer;
-        ctx.instance = self.config.instance(ctx.consumer.pruned);
+        ctx.instance = self.config.kupo_instance.clone();
 
         if self.limiter(&ctx.consumer).await? {
             session.respond_error(429).await?;

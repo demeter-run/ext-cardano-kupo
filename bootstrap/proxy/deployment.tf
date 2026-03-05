@@ -70,13 +70,8 @@ resource "kubernetes_deployment_v1" "kupo_proxy" {
           }
 
           env {
-            name  = "KUPO_PORT"
-            value = var.kupo_port
-          }
-
-          env {
-            name  = "KUPO_DNS"
-            value = "${var.namespace}.svc.cluster.local"
+            name  = "KUPO_INSTANCE"
+            value = var.kupo_instance
           }
 
           env {

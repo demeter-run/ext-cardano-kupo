@@ -80,6 +80,18 @@ variable "dns_names" {
 
 // Proxies
 
+variable "proxy_green_instance_per_network" {
+  description = "Map of network to kupo instance for proxy green"
+  type        = map(string)
+  default     = {}
+}
+
+variable "proxy_blue_instance_per_network" {
+  description = "Map of network to kupo instance for proxy blue"
+  type        = map(string)
+  default     = {}
+}
+
 // Proxy service annotations
 variable "proxy_green_extra_annotations_by_network" {
   description = <<EOT
