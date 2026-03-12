@@ -6,17 +6,19 @@ use tracing::{error, info, warn};
 
 use crate::{Config, State};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
 pub struct KupoHealthCheckResponse {
-    pub connection_status: ConnectionStatus,
-    pub most_recent_checkpoint: u64,
-    pub most_recent_node_tip: u64,
-    pub configuration: Configuration,
+    pub connection_status: String,
+    pub most_recent_checkpoint: Option<u64>,
+    pub most_recent_node_tip: Option<u64>,
+    pub seconds_since_last_block: Option<i32>,
+    pub network_synchronization: Option<f64>,
+    pub configuration: HealthConfiguration,
     pub version: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Configuration {
+#[derive(Clone, Default, Debug, PartialEq, Serialize, Deserialize)]
+pub struct HealthConfiguration {
     pub indexes: String,
 }
 
