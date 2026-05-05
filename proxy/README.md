@@ -11,8 +11,8 @@ This proxy will allow Kupo to be accessed externally.
 | PROMETHEUS_ADDR  | 0.0.0.0:9090            |
 | SSL_CRT_PATH     | /localhost.crt          |
 | SSL_KEY_PATH     | /localhost.key          |
-| KUPO_PORT        |                         |
-| KUPO_DNS         | internal k8s dns        |
+| KUPO_INSTANCES   | JSON map of network to internal k8s dns |
+| HEALTH_NETWORK   | health upstream network, defaults to cardano-mainnet |
 | PROXY_TIERS_PATH | path of tiers toml file |
 
 ## Rate limit

@@ -39,6 +39,19 @@ impl HealthBackgroundService {
     }
 
     async fn get_health(&self) -> bool {
+        let Some(kupo_instance) = self
+            .config
+            .kupo_instances
+            .get(&self.config.health_network)
+            .cloned()
+        else {
+            warn!(
+                network = self.config.health_network,
+                "Health network is missing from KUPO_INSTANCES"
+            );
+            return false;
+        };
+
         let client = match reqwest::Client::builder().build() {
             Ok(client) => client,
             Err(err) => {
@@ -48,7 +61,7 @@ impl HealthBackgroundService {
         };
 
         let response = match client
-            .get(format!("http://{}/health", self.config.kupo_instance))
+            .get(format!("http://{}/health", kupo_instance))
             .header("Accept", "application/json")
             .send()
             .await

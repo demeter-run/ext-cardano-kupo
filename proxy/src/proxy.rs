@@ -119,6 +119,10 @@ impl KupoProxy {
         session.write_response_header(header, true).await.unwrap();
     }
 
+    fn upstream_instance(&self, network: &str) -> Option<&str> {
+        self.config.kupo_instances.get(network).map(String::as_str)
+    }
+
     fn add_cors_headers(resp: &mut ResponseHeader, config: &Config) -> Result<()> {
         resp.insert_header("Access-Control-Allow-Origin", &config.cors_allow_origin)?;
         resp.insert_header("Access-Control-Allow-Methods", &config.cors_allow_methods)?;
@@ -184,13 +188,13 @@ impl ProxyHttp for KupoProxy {
             return Ok(true);
         };
 
-        if consumer.network != self.config.network {
-            session.respond_error(401).await?;
+        let Some(instance) = self.upstream_instance(&consumer.network) else {
+            session.respond_error(502).await?;
             return Ok(true);
-        }
+        };
 
         ctx.consumer = consumer;
-        ctx.instance = self.config.kupo_instance.clone();
+        ctx.instance = instance.to_string();
 
         if self.limiter(&ctx.consumer).await? {
             session.respond_error(429).await?;
