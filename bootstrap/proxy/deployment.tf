@@ -50,11 +50,6 @@ resource "kubernetes_deployment_v1" "kupo_proxy" {
           }
 
           env {
-            name  = "NETWORK"
-            value = var.network
-          }
-
-          env {
             name  = "PROXY_NAMESPACE"
             value = var.namespace
           }
@@ -70,8 +65,13 @@ resource "kubernetes_deployment_v1" "kupo_proxy" {
           }
 
           env {
-            name  = "KUPO_INSTANCE"
-            value = var.kupo_instance
+            name  = "KUPO_INSTANCES"
+            value = jsonencode(var.kupo_instances)
+          }
+
+          env {
+            name  = "HEALTH_NETWORK"
+            value = "cardano-mainnet"
           }
 
           env {

@@ -45,55 +45,44 @@ module "kupo_services_non_pruned" {
   prune     = false
 }
 
-// blue (once we have a green, we can update its name to proxy-blue)
 module "kupo_proxies_blue" {
   depends_on = [kubernetes_namespace.namespace]
-  for_each   = { for network in var.networks : "${network}" => network }
   source     = "./proxy"
 
-  network           = each.value
   cloud_provider    = var.cloud_provider
   cluster_issuer    = var.cluster_issuer
   namespace         = var.namespace
   replicas          = var.proxy_blue_replicas
   extension_name    = var.extension_subdomain
-  extra_annotations = lookup(var.proxy_blue_extra_annotations_by_network, each.value, {})
+  extra_annotations = var.proxy_blue_extra_annotations
   proxy_image_tag   = var.proxy_blue_image_tag
   resources         = var.proxy_resources
   environment       = "blue"
-  name              = "proxy-blue-${each.value}"
+  name              = "proxy-blue"
   tolerations       = var.proxy_blue_tolerations
-  cert_secret_name  = "proxy-blue-${each.value}-wildcard-tls"
-  kupo_instance     = var.proxy_blue_instance_per_network[each.value]
-  dns_names = lookup(var.dns_names, each.value, [
-    "${each.value}-v2.${var.extension_subdomain}.${var.dns_zone}",
-    "*.${each.value}-v2.${var.extension_subdomain}.${var.dns_zone}"
-  ])
+  cert_secret_name  = "proxy-blue-wildcard-tls"
+  kupo_instances    = var.proxy_blue_instance_per_network
+  dns_names         = var.dns_names
 }
 
 module "kupo_proxies_green" {
-  for_each   = { for network in var.networks : "${network}" => network }
   depends_on = [kubernetes_namespace.namespace]
   source     = "./proxy"
 
-  network           = each.value
   cloud_provider    = var.cloud_provider
   cluster_issuer    = var.cluster_issuer
   namespace         = var.namespace
   replicas          = var.proxy_green_replicas
   extension_name    = var.extension_subdomain
-  extra_annotations = lookup(var.proxy_green_extra_annotations_by_network, each.value, {})
+  extra_annotations = var.proxy_green_extra_annotations
   proxy_image_tag   = var.proxy_green_image_tag
   resources         = var.proxy_resources
   environment       = "green"
-  name              = "proxy-green-${each.value}"
+  name              = "proxy-green"
   tolerations       = var.proxy_green_tolerations
-  cert_secret_name  = "proxy-green-${each.value}-wildcard-tls"
-  kupo_instance     = var.proxy_green_instance_per_network[each.value]
-  dns_names = lookup(var.dns_names, each.value, [
-    "${each.value}-v2.${var.extension_subdomain}.${var.dns_zone}",
-    "*.${each.value}-v2.${var.extension_subdomain}.${var.dns_zone}"
-  ])
+  cert_secret_name  = "proxy-green-wildcard-tls"
+  kupo_instances    = var.proxy_green_instance_per_network
+  dns_names         = var.dns_names
 }
 
 module "kupo_cells" {

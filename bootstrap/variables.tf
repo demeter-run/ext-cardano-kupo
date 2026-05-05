@@ -73,13 +73,11 @@ variable "dns_zone" {
 }
 
 variable "dns_names" {
-  description = "Map of network to list of DNS names"
-  type        = map(list(string))
-  default     = {}
+  description = "List of DNS names to create certificate"
+  type        = list(string)
 }
 
 // Proxies
-
 variable "proxy_green_instance_per_network" {
   description = "Map of network to kupo instance for proxy green"
   type        = map(string)
@@ -92,14 +90,9 @@ variable "proxy_blue_instance_per_network" {
   default     = {}
 }
 
-// Proxy service annotations
-variable "proxy_green_extra_annotations_by_network" {
-  description = <<EOT
-A map where keys are network names (only those defined in the "networks" variable)
-and values are maps of extra annotations for the green proxy service specific
-to that network.
-EOT
-  type        = map(map(string))
+variable "proxy_green_extra_annotations" {
+  description = "Shared extra annotations for the green proxy service"
+  type        = map(string)
   default     = {}
 }
 
@@ -112,14 +105,9 @@ variable "proxy_green_replicas" {
   default = 1
 }
 
-// Proxy service annotations
-variable "proxy_blue_extra_annotations_by_network" {
-  description = <<EOT
-A map where keys are network names (only those defined in the "networks" variable)
-and values are maps of extra annotations for the blue proxy service specific
-to that network.
-EOT
-  type        = map(map(string))
+variable "proxy_blue_extra_annotations" {
+  description = "Shared extra annotations for the blue proxy service"
+  type        = map(string)
   default     = {}
 }
 
