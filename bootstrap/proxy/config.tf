@@ -1,6 +1,8 @@
-// numbers here should consider number of proxy replicas
+// each replica enforces these limits on its own, so by default the tier quota
+// is split across replicas
 locals {
   config_map_name = var.environment != null ? "${var.environment}-proxy-config" : "proxy-config"
+  quota_divisor   = var.split_quota_across_replicas ? max(var.replicas, 1) : 1
 
   tiers = [
     {
@@ -8,11 +10,11 @@ locals {
       "rates" = [
         {
           "interval" = "1m",
-          "limit"    = floor(5 * 60 / var.replicas)
+          "limit"    = floor(5 * 60 / local.quota_divisor)
         },
         {
           "interval" = "1d",
-          "limit"    = floor(430000 / var.replicas)
+          "limit"    = floor(430000 / local.quota_divisor)
         }
       ]
     },
@@ -21,11 +23,11 @@ locals {
       "rates" = [
         {
           "interval" = "1m",
-          "limit"    = floor(20 * 60 / var.replicas)
+          "limit"    = floor(20 * 60 / local.quota_divisor)
         },
         {
           "interval" = "1d",
-          "limit"    = floor(1700000 / var.replicas)
+          "limit"    = floor(1700000 / local.quota_divisor)
         }
       ]
     },
@@ -34,11 +36,11 @@ locals {
       "rates" = [
         {
           "interval" = "1m",
-          "limit"    = floor(100 * 60 / var.replicas)
+          "limit"    = floor(100 * 60 / local.quota_divisor)
         },
         {
           "interval" = "1d",
-          "limit"    = floor(8600000 / var.replicas)
+          "limit"    = floor(8600000 / local.quota_divisor)
         }
       ]
     },
@@ -47,11 +49,11 @@ locals {
       "rates" = [
         {
           "interval" = "1m",
-          "limit"    = floor(300 * 60 / var.replicas)
+          "limit"    = floor(300 * 60 / local.quota_divisor)
         },
         {
           "interval" = "1d",
-          "limit"    = floor(26000000 / var.replicas)
+          "limit"    = floor(26000000 / local.quota_divisor)
         }
       ]
     }
