@@ -28,6 +28,12 @@ variable "replicas" {
   default = 1
 }
 
+variable "split_quota_across_replicas" {
+  description = "Divide each tier's rate limits by the replica count. Replicas enforce limits independently, so when false a consumer whose connections reach several replicas can exceed its tier by up to the replica count."
+  type        = bool
+  default     = true
+}
+
 variable "proxy_image_tag" {
   type = string
 }

@@ -63,6 +63,8 @@ module "kupo_proxies_blue" {
   cert_secret_name  = "proxy-blue-wildcard-tls"
   kupo_instances    = var.proxy_blue_instance_per_network
   dns_names         = var.dns_names
+
+  split_quota_across_replicas = var.proxy_split_quota_across_replicas
 }
 
 module "kupo_proxies_green" {
@@ -83,6 +85,8 @@ module "kupo_proxies_green" {
   cert_secret_name  = "proxy-green-wildcard-tls"
   kupo_instances    = var.proxy_green_instance_per_network
   dns_names         = var.dns_names
+
+  split_quota_across_replicas = var.proxy_split_quota_across_replicas
 }
 
 module "kupo_cells" {

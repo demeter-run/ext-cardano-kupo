@@ -120,6 +120,12 @@ variable "proxy_blue_replicas" {
   default = 1
 }
 
+variable "proxy_split_quota_across_replicas" {
+  description = "Divide each tier's rate limits by the proxy replica count. When false, every replica enforces the full tier quota."
+  type        = bool
+  default     = true
+}
+
 variable "proxy_green_tolerations" {
   type = list(object({
     effect   = string
