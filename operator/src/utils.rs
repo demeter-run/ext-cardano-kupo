@@ -44,7 +44,7 @@ pub fn build_hostname(network: &str, key: &str, kupo_version: &Option<String>) -
 pub async fn build_api_key(crd: &KupoPort) -> Result<String, Error> {
     let namespace = crd.namespace().unwrap();
 
-    let name = format!("kupo-auth-{}", &crd.name_any());
+    let name = format!("kupo-auth-{}", crd.name_any());
 
     let password = format!("{}{}", name, namespace).as_bytes().to_vec();
 
