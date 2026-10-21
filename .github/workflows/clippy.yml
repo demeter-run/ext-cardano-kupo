@@ -7,12 +7,20 @@ on:
     paths:
       - ".github/workflows/clippy.yml"
       - "operator/**"
+      - "Cargo.lock"
+      - "Cargo.toml"
+      - "scripts/check-trust-floor.sh"
+      - "scripts/check-trust-floor.test.sh"
   pull_request:
     branches:
       - main
     paths:
       - ".github/workflows/clippy.yml"
       - "operator/**"
+      - "Cargo.lock"
+      - "Cargo.toml"
+      - "scripts/check-trust-floor.sh"
+      - "scripts/check-trust-floor.test.sh"
 
 jobs:
   lint:
@@ -23,6 +31,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+
+      - name: Test trust floor fixtures
+        working-directory: .
+        run: sh scripts/check-trust-floor.test.sh
+
+      - name: Check trust floor
+        working-directory: .
+        run: sh scripts/check-trust-floor.sh
 
       - name: Clippy check lints
         run: cargo clippy -- -D warnings
