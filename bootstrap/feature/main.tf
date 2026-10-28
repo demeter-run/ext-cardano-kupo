@@ -30,6 +30,11 @@ output "namespace" {
   value = var.namespace
 }
 
+output "proxy_service_account_name" {
+  value      = kubernetes_service_account_v1.proxy.metadata[0].name
+  depends_on = [kubernetes_cluster_role_binding_v1.proxy]
+}
+
 variable "resources" {
   type = object({
     limits = object({

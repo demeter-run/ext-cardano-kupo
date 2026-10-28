@@ -21,7 +21,7 @@ resource "kubernetes_deployment_v1" "kupo_proxy" {
         labels = local.proxy_labels
       }
       spec {
-        service_account_name = "proxy"
+        service_account_name = var.service_account_name
 
         container {
           name              = "main"
