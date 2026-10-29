@@ -49,6 +49,8 @@ resource "kubernetes_stateful_set_v1" "kupo" {
         }
       }
       spec {
+        automount_service_account_token = false
+
         security_context {
           fs_group = 1000
         }

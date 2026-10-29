@@ -49,20 +49,21 @@ module "kupo_proxies_blue" {
   depends_on = [kubernetes_namespace.namespace]
   source     = "./proxy"
 
-  cloud_provider    = var.cloud_provider
-  cluster_issuer    = var.cluster_issuer
-  namespace         = var.namespace
-  replicas          = var.proxy_blue_replicas
-  extension_name    = var.extension_subdomain
-  extra_annotations = var.proxy_blue_extra_annotations
-  proxy_image_tag   = var.proxy_blue_image_tag
-  resources         = var.proxy_resources
-  environment       = "blue"
-  name              = "proxy-blue"
-  tolerations       = var.proxy_blue_tolerations
-  cert_secret_name  = "proxy-blue-wildcard-tls"
-  kupo_instances    = var.proxy_blue_instance_per_network
-  dns_names         = var.dns_names
+  cloud_provider       = var.cloud_provider
+  cluster_issuer       = var.cluster_issuer
+  namespace            = var.namespace
+  service_account_name = module.kupo_feature.proxy_service_account_name
+  replicas             = var.proxy_blue_replicas
+  extension_name       = var.extension_subdomain
+  extra_annotations    = var.proxy_blue_extra_annotations
+  proxy_image_tag      = var.proxy_blue_image_tag
+  resources            = var.proxy_resources
+  environment          = "blue"
+  name                 = "proxy-blue"
+  tolerations          = var.proxy_blue_tolerations
+  cert_secret_name     = "proxy-blue-wildcard-tls"
+  kupo_instances       = var.proxy_blue_instance_per_network
+  dns_names            = var.dns_names
 
   split_quota_across_replicas = var.proxy_split_quota_across_replicas
 }
@@ -71,20 +72,21 @@ module "kupo_proxies_green" {
   depends_on = [kubernetes_namespace.namespace]
   source     = "./proxy"
 
-  cloud_provider    = var.cloud_provider
-  cluster_issuer    = var.cluster_issuer
-  namespace         = var.namespace
-  replicas          = var.proxy_green_replicas
-  extension_name    = var.extension_subdomain
-  extra_annotations = var.proxy_green_extra_annotations
-  proxy_image_tag   = var.proxy_green_image_tag
-  resources         = var.proxy_resources
-  environment       = "green"
-  name              = "proxy-green"
-  tolerations       = var.proxy_green_tolerations
-  cert_secret_name  = "proxy-green-wildcard-tls"
-  kupo_instances    = var.proxy_green_instance_per_network
-  dns_names         = var.dns_names
+  cloud_provider       = var.cloud_provider
+  cluster_issuer       = var.cluster_issuer
+  namespace            = var.namespace
+  service_account_name = module.kupo_feature.proxy_service_account_name
+  replicas             = var.proxy_green_replicas
+  extension_name       = var.extension_subdomain
+  extra_annotations    = var.proxy_green_extra_annotations
+  proxy_image_tag      = var.proxy_green_image_tag
+  resources            = var.proxy_resources
+  environment          = "green"
+  name                 = "proxy-green"
+  tolerations          = var.proxy_green_tolerations
+  cert_secret_name     = "proxy-green-wildcard-tls"
+  kupo_instances       = var.proxy_green_instance_per_network
+  dns_names            = var.dns_names
 
   split_quota_across_replicas = var.proxy_split_quota_across_replicas
 }
