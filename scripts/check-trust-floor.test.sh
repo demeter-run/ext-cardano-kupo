@@ -1,6 +1,6 @@
 #!/bin/sh
 # Fixtures for check-trust-floor.sh: each case writes a lockfile and checks
-# the script's exit status (0 ok or warning only, 1 below the floor) and,
+# the script's exit status (0 ok, 1 below the floor) and,
 # where given, its whole output.
 set -eu
 
@@ -42,16 +42,23 @@ expect 0 "webpki-roots 1.1.0" "$header
 $(package webpki-roots 1.1.0)" "trust floor: ok"
 expect 1 "webpki-root-certs 1.0.2" "$header
 $(package webpki-root-certs 1.0.2)" "trust floor: webpki-root-certs 1.0.2 is below 1.0.10"
-expect 0 "webpki-roots 0.25.4 warns" "$header
-$(package webpki-roots 0.25.4)" "trust floor: warning: webpki-roots 0.25.4 predates the 1.x line
-trust floor: ok"
+expect 1 "webpki-roots 0.25.4" "$header
+$(package webpki-roots 0.25.4)" "trust floor: webpki-roots 0.25.4 is below 1.0.10"
+expect 1 "webpki-root-certs 0.26.11" "$header
+$(package webpki-root-certs 0.26.11)" "trust floor: webpki-root-certs 0.26.11 is below 1.0.10"
 expect 1 "rustls-webpki 0.103.15" "$header
 $(package rustls-webpki 0.103.15)" "trust floor: rustls-webpki 0.103.15 is below 0.103.16"
 expect 0 "rustls-webpki 0.103.16" "$header
 $(package rustls-webpki 0.103.16)" "trust floor: ok"
-expect 0 "rustls-webpki 0.102.8 warns" "$header
-$(package rustls-webpki 0.102.8)" "trust floor: warning: rustls-webpki 0.102.8 predates the 0.103 line
-trust floor: ok"
+expect 1 "rustls-webpki 0.102.8" "$header
+$(package rustls-webpki 0.102.8)" "trust floor: rustls-webpki 0.102.8 is below 0.103.16"
+expect 1 "rustls-webpki 0.101.7" "$header
+$(package rustls-webpki 0.101.7)" "trust floor: rustls-webpki 0.101.7 is below 0.103.16"
+expect 1 "every entry below the floor is reported" "$header
+$(package rustls-webpki 0.101.7)
+$(package rustls-webpki 0.103.16)
+$(package webpki-roots 0.25.4)" "trust floor: rustls-webpki 0.101.7 is below 0.103.16
+trust floor: webpki-roots 0.25.4 is below 1.0.10"
 expect 0 "rustls-webpki 0.104.0" "$header
 $(package rustls-webpki 0.104.0)" "trust floor: ok"
 expect 1 "below the floor after other packages" "$header

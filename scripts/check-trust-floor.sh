@@ -1,8 +1,7 @@
 #!/bin/sh
 # Fails when Cargo.lock carries a TLS trust crate below the trust floor:
-#   webpki-roots / webpki-root-certs 1.x below 1.0.10
-#   rustls-webpki 0.103.x below 0.103.16
-# Older lines (webpki-roots 0.x, rustls-webpki 0.101/0.102) only warn.
+#   webpki-roots / webpki-root-certs below 1.0.10, older 0.x lines included
+#   rustls-webpki below 0.103.16, older 0.101/0.102 lines included
 #
 # Any TOML layout cargo accepts is read: CRLF line endings, optional spaces
 # around "=", either quote style, and keys in any order within a package.
@@ -20,18 +19,14 @@ function check(name, version,    v, major, minor, patch) {
     split(version, v, /[.+-]/)
     major = v[1] + 0; minor = v[2] + 0; patch = v[3] + 0
     if (name == "webpki-roots" || name == "webpki-root-certs") {
-        if (major == 0) {
-            printf "trust floor: warning: %s %s predates the 1.x line\n", name, version
-        } else if (major == 1 && minor == 0 && patch < 10) {
+        if (major == 0 || (major == 1 && minor == 0 && patch < 10)) {
             printf "trust floor: %s %s is below 1.0.10\n", name, version
             failed = 1
         }
     } else if (name == "rustls-webpki" && major == 0) {
-        if (minor == 103 && patch < 16) {
+        if (minor < 103 || (minor == 103 && patch < 16)) {
             printf "trust floor: %s %s is below 0.103.16\n", name, version
             failed = 1
-        } else if (minor < 103) {
-            printf "trust floor: warning: %s %s predates the 0.103 line\n", name, version
         }
     }
 }
